@@ -1029,8 +1029,6 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 		else
 		{
 			int Team = pResult->GetInteger(0);
-			/* use only some teams so their colors are distinguishable */
-			Team = (Team / 10) % 10 * 10 + !!Team;
 
 			if(Team < 0 || Team >= MAX_CLIENTS)
 				Team = pController->m_Teams.GetFirstEmptyTeam();
@@ -1087,7 +1085,7 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 				aBuf,
 				sizeof(aBuf),
 				"You are in team %d",
-				((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.Team(pResult->m_ClientID));
+				((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.RTeam(pResult->m_ClientID));
 			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 				aBuf);
 		}

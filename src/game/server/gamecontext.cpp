@@ -32,6 +32,8 @@
 #include "score.h"
 #include "laserText.h"
 
+int ndummies = 0;
+
 // Not thread-safe!
 class CClientChatLogger : public ILogger
 {
@@ -1110,18 +1112,6 @@ void CGameContext::OnTick()
 		m_SqlRandomMapResult = nullptr;
 	}
 
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies)
-	{
-		for(int i = 0; i < g_Config.m_DbgDummies; i++)
-		{
-			CNetObj_PlayerInput Input = {0};
-			Input.m_Direction = (i & 1) ? -1 : 1;
-			m_apPlayers[MAX_CLIENTS - i - 1]->OnPredictedInput(&Input);
-		}
-	}
-#endif
-
 	// Record player position at the end of the tick
 	if(m_TeeHistorianActive)
 	{
@@ -1517,13 +1507,8 @@ void CGameContext::OnClientConnected(int ClientID, void *pData)
 	m_apPlayers[ClientID] = new(ClientID) CPlayer(this, NextUniqueClientID, ClientID, StartTeam);
 	NextUniqueClientID += 1;
 
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies)
-	{
-		if(ClientID >= MAX_CLIENTS - g_Config.m_DbgDummies)
-			return;
-	}
-#endif
+	if (ClientID >= MAX_CLIENTS - ndummies)
+		return;
 
 	SendMotd(ClientID);
 	SendSettings(ClientID);
@@ -1554,6 +1539,9 @@ void CGameContext::OnClientDrop(int ClientID, const char *pReason)
 		if(pPlayer && pPlayer->m_LastWhisperTo == ClientID)
 			pPlayer->m_LastWhisperTo = -1;
 	}
+
+	if (ClientID >= MAX_CLIENTS - ndummies)
+		return;
 
 	protocol7::CNetMsg_Sv_ClientDrop Msg;
 	Msg.m_ClientID = ClientID;
@@ -2349,11 +2337,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				char aChatText[256];
 				str_format(aChatText, sizeof(aChatText), "'%s' changed name to '%s'", aOldName, Server()->ClientName(ClientID));
 				SendChat(-1, CGameContext::CHAT_ALL, aChatText);
-
-				// reload scores
-				Score()->PlayerData(ClientID)->Reset();
-				m_apPlayers[ClientID]->m_Score = 0;
-				Score()->LoadPlayerData(ClientID);
 
 				SixupNeedsUpdate = true;
 			}
@@ -3535,15 +3518,6 @@ void CGameContext::OnInit(/*class IKernel *pKernel*/)
 	if(GIT_SHORTREV_HASH)
 		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "git-revision", GIT_SHORTREV_HASH);
 
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies)
-	{
-		for(int i = 0; i < g_Config.m_DbgDummies; i++)
-		{
-			OnClientConnected(MAX_CLIENTS - i - 1, 0);
-		}
-	}
-#endif
 }
 
 void CGameContext::DeleteTempfile()
@@ -3553,6 +3527,76 @@ void CGameContext::DeleteTempfile()
 		Storage()->RemoveFile(m_aDeleteTempfile, IStorage::TYPE_SAVE);
 		m_aDeleteTempfile[0] = 0;
 	}
+}
+
+CGameTeams *CGameContext::Teams()
+{
+	return &((CGameControllerDDRace *)m_pController)->m_Teams;
+}
+
+CTeamsCore *CGameContext::TeamsCore()
+{
+	return &Teams()->m_Core;
+}
+
+int CGameContext::TeamOf(int cid)
+{
+	return TeamsCore()->Team(cid);
+}
+
+int CGameContext::AddDummy()
+{
+	int i, id;
+
+	for (i = 0; i <= ndummies; i++)
+		if (!m_apPlayers[id = MAX_CLIENTS-1 - i])
+			goto found;
+	return -1;
+found:
+	if (id < MAX_CLIENTS - ndummies)
+		ndummies++;
+	OnClientConnected(id, 0);
+	m_apPlayers[id]->SpawnAt(vec2());
+	return id;
+}
+
+void CGameContext::RemoveDummy(int id)
+{
+	CPlayer *p;
+	int i, t;
+
+	if (!ndummies || id < MAX_CLIENTS - ndummies)
+		return;
+	if ((t = TeamOf(id))) {
+		TeamsCore()->isactive[t] = 0;
+		for (i = 0; i < MAX_CLIENTS - ndummies; i++)
+			Teams()->SendTeamsState(i);
+	}
+	OnClientDrop(id, 0);
+	if ((i = id) == MAX_CLIENTS - ndummies)
+		do
+			ndummies--;
+		while (++i < MAX_CLIENTS && !m_apPlayers[i]);
+}
+
+int CGameContext::DummyOf(FPARS(int, id, t))
+{
+	CCharacter *dmy;
+	int did;
+
+	if ((did = AddDummy()) < 0)
+		return -1;
+
+	dmy = m_apPlayers[did]->GetCharacter();
+	dmy->Clone(id);
+	if (!dmy->m_FreezeTime)
+		dmy->Freeze();
+
+	if (t) {
+		Teams()->m_Core.isactive[t] = 1;
+		Teams()->SetCharacterTeam(did, t);
+	}
+	return did;
 }
 
 void CGameContext::OnMapChange(char *pNewMapName, int MapNameSize)

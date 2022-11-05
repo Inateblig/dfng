@@ -32,6 +32,7 @@
 #include <engine/shared/snapshot.h>
 
 #include <game/version.h>
+#include <game/server/gamecontext.h>
 
 // DDRace
 #include <engine/shared/linereader.h>
@@ -624,6 +625,8 @@ void CServer::GetClientAddr(int ClientID, char *pAddrStr, int Size) const
 
 const char *CServer::ClientName(int ClientID) const
 {
+	if (ClientID >= MAX_CLIENTS - ndummies)
+		return "";
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
 		return "(invalid)";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)

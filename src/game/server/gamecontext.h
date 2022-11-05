@@ -19,6 +19,8 @@
 #include <memory>
 #include <string>
 
+#include <base/util.h>
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -45,6 +47,8 @@ enum
 {
 	NUM_TUNEZONES = 256
 };
+
+extern int ndummies;
 
 class CCharacter;
 class CConfig;
@@ -273,6 +277,14 @@ public:
 
 	void OnClientEngineJoin(int ClientID, bool Sixup) override;
 	void OnClientEngineDrop(int ClientID, const char *pReason) override;
+
+	class CGameTeams *Teams();
+	CTeamsCore *TeamsCore();
+	int TeamOf(int cid);
+
+	int AddDummy();
+	void RemoveDummy(int id);
+	int DummyOf(FPARS(int, id, t));
 
 	bool IsClientReady(int ClientID) const override;
 	bool IsClientPlayer(int ClientID) const override;

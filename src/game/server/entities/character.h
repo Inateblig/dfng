@@ -65,9 +65,10 @@ public:
 
 	void Die(int Killer, int Weapon);
 	void DieSpikes(int tile);
-	void Hit(int Killer, int Weapon);
+	void Hit(int From, int Weapon);
 	void TakeHammerHit(CCharacter *pFrom);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
+	void Clone(int whom);
 
 	bool Spawn(class CPlayer *pPlayer, vec2 Pos);
 	bool Remove();
@@ -176,7 +177,6 @@ public:
 	bool Freeze(int Seconds);
 	bool Freeze();
 	bool UnFreeze();
-	bool IsFrozen();
 	void GiveAllWeapons();
 	void ResetPickups();
 	int m_DDRaceState;

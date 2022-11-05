@@ -2299,8 +2299,6 @@ if(SERVER)
     upnp.h
   )
   set_src(GAME_SERVER GLOB_RECURSE src/game/server
-    laserText.cpp
-    laserText.h
     alloc.h
     ddracechat.cpp
     ddracecommands.cpp
@@ -2336,6 +2334,8 @@ if(SERVER)
     gamemodes/DDRace.h
     gameworld.cpp
     gameworld.h
+    laserText.cpp
+    laserText.h
     player.cpp
     player.h
     save.cpp

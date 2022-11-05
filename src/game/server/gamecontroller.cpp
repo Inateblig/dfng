@@ -51,15 +51,8 @@ void IGameController::DoActivityCheck()
 	if(g_Config.m_SvInactiveKickTime == 0)
 		return;
 
-	for(int i = 0; i < MAX_CLIENTS; ++i)
+	for(int i = 0; i < MAX_CLIENTS - ndummies; ++i)
 	{
-#ifdef CONF_DEBUG
-		if(g_Config.m_DbgDummies)
-		{
-			if(i >= MAX_CLIENTS - g_Config.m_DbgDummies)
-				break;
-		}
-#endif
 		if(GameServer()->m_apPlayers[i] && GameServer()->m_apPlayers[i]->GetTeam() != TEAM_SPECTATORS && Server()->GetAuthedState(i) == AUTHED_NO)
 		{
 			if(Server()->Tick() > GameServer()->m_apPlayers[i]->m_LastActionTick + g_Config.m_SvInactiveKickTime * Server()->TickSpeed() * 60)
@@ -483,10 +476,8 @@ int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 
 	if (!pKiller || Weapon == WEAPON_GAME)
 		return 0;
-	if (pKiller == pVictim->GetPlayer() && Weapon == WEAPON_SELF) {
-		pVictim->GetPlayer()->m_Score--; /* selfkill */
+	if (pKiller == pVictim->GetPlayer() && Weapon == WEAPON_SELF)
 		return 0;
-	}
 	if (Weapon <= NUM_WEAPONS) /* not death from spikes */
 		return 0;
 
@@ -522,7 +513,7 @@ void IGameController::OnCharacterSpawn(class CCharacter *pChr)
 
 	// give default weapons
 	pChr->GiveWeapon(WEAPON_HAMMER);
-	pChr->GiveWeapon(WEAPON_LASER);
+	pChr->GiveWeapon(g_Config.m_SvGiveWeapon);
 }
 
 void IGameController::HandleCharacterTiles(CCharacter *pChr, int MapIndex)
@@ -793,28 +784,28 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 
 void IGameController::DoWinCheck()
 {
-	if(m_GameOverTick == -1 && !m_Warmup && !GameServer()->m_World.m_ResetRequested)
-	{
-		// gather some stats
-		int Topscore = 0;
-		int TopscoreCount = 0;
-		for(int i = 0; i < MAX_CLIENTS; i++) {
-			if(GameServer()->m_apPlayers[i]) {
-				if(GameServer()->m_apPlayers[i]->m_Score > Topscore) {
-					Topscore = GameServer()->m_apPlayers[i]->m_Score;
-					TopscoreCount = 1;
-				}
-				else if(GameServer()->m_apPlayers[i]->m_Score == Topscore)
-					TopscoreCount++;
-				}
-		}
-		// check score win condition
-		if((g_Config.m_SvScorelimit > 0 && Topscore >= g_Config.m_SvScorelimit) ||
-		(g_Config.m_SvTimelimit > 0 && (Server()->Tick()-m_RoundStartTick) >= g_Config.m_SvTimelimit*Server()->TickSpeed()*60)) {
-			if(TopscoreCount == 1)
-					EndRound();
-			else
-				m_SuddenDeath = 1;
-		}
+	CPlayer *p;
+	int i, top, ntop;
+
+	if (m_GameOverTick != -1 || m_Warmup || GameServer()->m_World.m_ResetRequested)
+		return;
+	top = ntop = 0;
+	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
+		if (!(p = GameServer()->m_apPlayers[i]))
+			continue;
+		if (p->m_Score > top) {
+			top = p->m_Score;
+			ntop = 1;
+		} else if (p->m_Score == top)
+			ntop++;
+	}
+	// check score win condition
+	if ((g_Config.m_SvScorelimit > 0 && top >= g_Config.m_SvScorelimit) ||
+	(g_Config.m_SvTimelimit > 0 && Server()->Tick() - m_RoundStartTick >=
+	g_Config.m_SvTimelimit * Server()->TickSpeed() * 60)) {
+		if (ntop == 1)
+			EndRound();
+		else
+			m_SuddenDeath = 1;
 	}
 }

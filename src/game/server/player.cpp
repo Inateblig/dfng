@@ -171,14 +171,8 @@ void CPlayer::Tick()
 		m_ScoreFinishResult = nullptr;
 	}
 
-	bool ClientIngame = Server()->ClientIngame(m_ClientID);
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies && m_ClientID >= MAX_CLIENTS - g_Config.m_DbgDummies)
-	{
-		ClientIngame = true;
-	}
-#endif
-	if(!ClientIngame)
+	if (!Server()->ClientIngame(m_ClientID) &&
+	m_ClientID < MAX_CLIENTS - ndummies)
 		return;
 
 	if(m_ChatScore > 0)
@@ -301,11 +295,13 @@ void CPlayer::PostTick()
 
 void CPlayer::PostPostTick()
 {
-#ifdef CONF_DEBUG
-	if(!g_Config.m_DbgDummies || m_ClientID < MAX_CLIENTS - g_Config.m_DbgDummies)
-#endif
-		if(!Server()->ClientIngame(m_ClientID))
-			return;
+	if (m_ClientID >= MAX_CLIENTS - ndummies) {
+		if (!m_pCharacter)
+			GameServer()->RemoveDummy(m_ClientID);
+		return;
+	}
+	if(!Server()->ClientIngame(m_ClientID))
+		return;
 
 	if(!GameServer()->m_World.m_Paused && !m_pCharacter && m_Spawning && m_WeakHookSpawn)
 		TryRespawn();
@@ -313,9 +309,7 @@ void CPlayer::PostPostTick()
 
 void CPlayer::Snap(int SnappingClient)
 {
-#ifdef CONF_DEBUG
-	if(!g_Config.m_DbgDummies || m_ClientID < MAX_CLIENTS - g_Config.m_DbgDummies)
-#endif
+	if (m_ClientID < MAX_CLIENTS - ndummies)
 		if(!Server()->ClientIngame(m_ClientID))
 			return;
 
@@ -337,6 +331,8 @@ void CPlayer::Snap(int SnappingClient)
 
 	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
 	int Latency = SnappingClient == SERVER_DEMO_CLIENT ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aCurLatency[m_ClientID];
+	if (m_ClientID >= MAX_CLIENTS - ndummies)
+		Latency = 0;
 	int Score = m_Score;
 
 	// send 0 if times of others are not shown
@@ -408,7 +404,7 @@ void CPlayer::Snap(int SnappingClient)
 
 	pDDNetPlayer->m_AuthLevel = Server()->GetAuthedState(id);
 	pDDNetPlayer->m_Flags = 0;
-	if(m_Afk)
+	if(m_Afk && m_ClientID < MAX_CLIENTS - ndummies)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_AFK;
 	if(m_Paused == PAUSE_SPEC)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_SPEC;
@@ -561,11 +557,20 @@ CCharacter *CPlayer::GetCharacter()
 
 void CPlayer::KillCharacter(int Weapon)
 {
+	int dest;
+
 	if (!m_pCharacter)
 		return;
-	if (Weapon == WEAPON_SELF && m_pCharacter->m_FreezeTime)
-		return;
-	m_pCharacter->Die(m_ClientID, Weapon);
+	dest = 0;
+	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies) {
+		if (GameServer()->DummyOf(m_ClientID, 0) < 0)
+			return;
+		dest = 1;
+	}
+	if (dest)
+		m_pCharacter->Destroy();
+	else
+		m_pCharacter->Die(m_ClientID, Weapon);
 	delete m_pCharacter;
 	m_pCharacter = 0;
 }
@@ -590,8 +595,6 @@ CCharacter *CPlayer::ForceSpawn(vec2 Pos)
 
 void CPlayer::SetTeam(int Team, bool DoChatMsg)
 {
-	if (m_pCharacter && m_pCharacter->m_FreezeTime && Team == TEAM_SPECTATORS)
-		return;
 	KillCharacter();
 
 	m_Team = Team;
@@ -670,15 +673,20 @@ void CPlayer::TryRespawn()
 	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos, GameServer()->GetDDRaceTeam(m_ClientID)))
 		return;
 
-	m_WeakHookSpawn = false;
-	m_Spawning = false;
-	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World, GameServer()->GetLastPlayerInput(m_ClientID));
-	m_ViewPos = SpawnPos;
-	m_pCharacter->Spawn(this, SpawnPos);
+	SpawnAt(SpawnPos);
 	GameServer()->CreatePlayerSpawn(SpawnPos, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 		m_pCharacter->SetSolo(true);
+}
+
+void CPlayer::SpawnAt(vec2 pos)
+{
+	m_WeakHookSpawn = false;
+	m_Spawning = false;
+	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World, GameServer()->GetLastPlayerInput(m_ClientID));
+	m_ViewPos = pos;
+	m_pCharacter->Spawn(this, pos);
 }
 
 void CPlayer::UpdatePlaytime()
@@ -885,8 +893,8 @@ void CPlayer::ProcessScoreResult(CScorePlayerResult &Result)
 			// -9999 stands for no time and isn't displayed in scoreboard, so
 			// shift the time by a second if the player actually took 9999
 			// seconds to finish the map.
-			if(m_HasFinishScore && m_Score == 0)
-				m_Score = 0;
+			if(m_HasFinishScore && m_Score == -9999)
+				m_Score = -10000;
 			Server()->ExpireServerInfo();
 			int Birthday = Result.m_Data.m_Info.m_Birthday;
 			if(Birthday != 0 && !m_BirthdayAnnounced)
