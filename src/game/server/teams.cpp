@@ -76,7 +76,7 @@ void CGameTeams::tmpteam(FPARS(int, cid, t))
 	SetCharacterTeam(cid, t);
 }
 
-void CGameTeams::toprevteam(FPARS(int, cid, clr))
+void CGameTeams::toprevteam(int cid)
 {
 	int pt, t;
 
@@ -85,7 +85,7 @@ void CGameTeams::toprevteam(FPARS(int, cid, clr))
 	prevteam[cid] = -1;
 	t = m_Core.RTeam(cid);
 	m_Core.Team(cid, pt);
-	deactivate(t, clr);
+	deactivate(t);
 }
 
 void CGameTeams::OnCharacterStart(int ClientID)
@@ -406,20 +406,18 @@ void CGameTeams::SetForceCharacterTeam(int ClientID, int Team)
 {
 	m_aTeeStarted[ClientID] = false;
 	m_aTeeFinished[ClientID] = false;
-	int OldTeam = m_Core.Team(ClientID);
+	int OldTeam = m_Core.RTeam(ClientID);
 
-	if(Team != OldTeam && (OldTeam != TEAM_FLOCK || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO) && OldTeam != TEAM_SUPER && m_aTeamState[OldTeam] != TEAMSTATE_EMPTY)
-	{
-		bool NoElseInOldTeam = Count(OldTeam) <= 1;
-		if(NoElseInOldTeam)
-		{
-			m_aTeamState[OldTeam] = TEAMSTATE_EMPTY;
+	printf("chrtm: %d: %d->%d\n", ClientID, m_Core.RTeam(ClientID), Team);
+	if (Team != OldTeam && (OldTeam != TEAM_FLOCK || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
+	&& OldTeam != TEAM_SUPER && m_aTeamState[OldTeam] != TEAMSTATE_EMPTY
+	&& Count(OldTeam) <= 1) {
+		m_aTeamState[OldTeam] = TEAMSTATE_EMPTY;
 
-			// unlock team when last player leaves
-			SetTeamLock(OldTeam, false);
-			ResetRoundState(OldTeam);
-			// do not reset SaveTeamResult, because it should be logged into teehistorian even if the team leaves
-		}
+		// unlock team when last player leaves
+		SetTeamLock(OldTeam, false);
+		ResetRoundState(OldTeam);
+		// do not reset SaveTeamResult, because it should be logged into teehistorian even if the team leaves
 	}
 
 	m_Core.Team(ClientID, Team);
@@ -1058,22 +1056,18 @@ void CGameTeams::OnCharacterSpawn(int ClientID)
 	}
 }
 
-void CGameTeams::deactivate(FPARS(int, t, clr))
+void CGameTeams::deactivate(int t)
 {
-	CPlayer *p;
 	int i;
 
 	m_Core.isactive[t] = 0;
-	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
-		if (clr && m_Core.RTeam(i) == t && (p = GameServer()->m_apPlayers[i]))
-			p->KillCharacter();
+	for (i = 0; i < MAX_CLIENTS - ndummies; i++)
 		SendTeamsState(i);
-	}
 }
 
 void CGameTeams::OnCharacterDeath(int ClientID, int Weapon)
 {
-	toprevteam(ClientID, 1);
+	toprevteam(ClientID);
 	return;
 	m_Core.SetSolo(ClientID, false);
 

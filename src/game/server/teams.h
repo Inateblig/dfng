@@ -88,8 +88,8 @@ public:
 	}
 
 	void tmpteam(FPARS(int, cid, t));
-	void toprevteam(FPARS(int, cid, clr));
-	void deactivate(FPARS(int, t, clr));
+	void toprevteam(int cid);
+	void deactivate(int t);
 
 	void OnCharacterStart(int ClientID);
 	void OnCharacterFinish(int ClientID);

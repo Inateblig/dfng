@@ -883,7 +883,7 @@ void CGameContext::ConLockTeam(IConsole::IResult *pResult, void *pUserData)
 	{
 		((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.SetTeamLock(Team, true);
 
-		str_format(aBuf, sizeof(aBuf), "'%s' locked your team. After the race starts, killing will kill everyone in your team.", pSelf->Server()->ClientName(pResult->m_ClientID));
+		str_format(aBuf, sizeof(aBuf), "'%s' locked your team", pSelf->Server()->ClientName(pResult->m_ClientID));
 		pSelf->SendChatTeam(Team, aBuf);
 	}
 }
@@ -1028,11 +1028,18 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 		}
 		else
 		{
+			int cid;
 			int Team = pResult->GetInteger(0);
 
 			if(Team < 0 || Team >= MAX_CLIENTS)
 				Team = pController->m_Teams.GetFirstEmptyTeam();
 
+			cid = pPlayer->GetCID();
+			if (pController->m_Teams.prevteam[cid] >= 0
+			|| pSelf->TeamsCore()->isactive[pSelf->TeamsCore()->RTeam(cid)]) {
+				pSelf->SendChatTarget(cid, "You cannot change team now");
+				return;
+			}
 			if(pPlayer->m_Last_Team + (int64_t)pSelf->Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > pSelf->Server()->Tick())
 			{
 				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",

@@ -2436,8 +2436,8 @@ void CCharacter::Hit(int From, int Weapon)
 
 void CCharacter::TakeHammerHit(CCharacter *pFrom)
 {
-	vec2 p, dir;
-	float s;
+	vec2 p, dir, frompos;
+	float a, s;
 	int t, cid, from;
 
 	if (!m_TuneZone)
@@ -2445,11 +2445,14 @@ void CCharacter::TakeHammerHit(CCharacter *pFrom)
 	else
 		s = GameServer()->TuningList()[m_TuneZone].m_HammerStrength;
 
-	if (!length(dir = m_Pos - pFrom->m_Pos))
+	a = pFrom->m_Core.m_Angle / 256.f;
+	frompos = pFrom->m_Pos + vec2(cos(a), sin(a)) * m_Core.PhysicalSize();
+	if (!length(dir = m_Pos - frompos))
 		dir = vec2(0.f, -1.f);
 	dir = normalize(dir);
 
-	p = vec2(0.f, -1.f) + normalize(dir + vec2(0.f, -1.1f)) * 10.f;
+//	p = vec2(0.f, -1.f) + normalize(dir + vec2(0.f, -1.1f)) * 10.f;
+	p = dir * s;
 	p.x *= s * g_Config.m_SvHammerScaleX / 100.f;
 	p.y *= s * g_Config.m_SvHammerScaleY / 100.f;
 
