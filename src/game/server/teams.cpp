@@ -408,7 +408,6 @@ void CGameTeams::SetForceCharacterTeam(int ClientID, int Team)
 	m_aTeeFinished[ClientID] = false;
 	int OldTeam = m_Core.RTeam(ClientID);
 
-	printf("chrtm: %d: %d->%d\n", ClientID, m_Core.RTeam(ClientID), Team);
 	if (Team != OldTeam && (OldTeam != TEAM_FLOCK || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	&& OldTeam != TEAM_SUPER && m_aTeamState[OldTeam] != TEAMSTATE_EMPTY
 	&& Count(OldTeam) <= 1) {
