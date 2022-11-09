@@ -847,6 +847,8 @@ void CGameContext::ConLockTeam(IConsole::IResult *pResult, void *pUserData)
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	if(!CheckClientID(pResult->m_ClientID))
 		return;
+	if (pSelf->Teams()->prevteam[pResult->m_ClientID] >= 0)
+		return;
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORBIDDEN || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 	{
