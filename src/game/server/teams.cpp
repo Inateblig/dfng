@@ -21,6 +21,7 @@ void CGameTeams::Reset()
 	m_Core.Reset();
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
+		prevteam[i] = -1;
 		m_aTeeStarted[i] = false;
 		m_aTeeFinished[i] = false;
 		m_aLastChat[i] = 0;
@@ -66,6 +67,25 @@ void CGameTeams::ResetSwitchers(int Team)
 		Switcher.m_aEndTick[Team] = 0;
 		Switcher.m_aType[Team] = TILE_SWITCHOPEN;
 	}
+}
+
+void CGameTeams::tmpteam(FPARS(int, cid, t))
+{
+	m_Core.isactive[t] = 1;
+	prevteam[cid] = m_Core.RTeam(cid);
+	SetCharacterTeam(cid, t);
+}
+
+void CGameTeams::toprevteam(FPARS(int, cid, clr))
+{
+	int pt, t;
+
+	if ((pt = prevteam[cid]) < 0)
+		return;
+	prevteam[cid] = -1;
+	t = m_Core.RTeam(cid);
+	m_Core.Team(cid, pt);
+	deactivate(t, clr);
 }
 
 void CGameTeams::OnCharacterStart(int ClientID)
@@ -1015,10 +1035,16 @@ void CGameTeams::ProcessSaveTeam()
 
 void CGameTeams::OnCharacterSpawn(int ClientID)
 {
-	return;
-	m_Core.SetSolo(ClientID, false);
-	int Team = m_Core.Team(ClientID);
+	int pt;
 
+	m_Core.SetSolo(ClientID, false);
+	if ((pt = prevteam[ClientID]) >= 0) {
+		SetCharacterTeam(ClientID, pt);
+		prevteam[ClientID] = -1;
+	}
+	return;
+
+	int Team = m_Core.Team(ClientID);
 	if(GetSaving(Team))
 		return;
 
@@ -1032,8 +1058,22 @@ void CGameTeams::OnCharacterSpawn(int ClientID)
 	}
 }
 
+void CGameTeams::deactivate(FPARS(int, t, clr))
+{
+	CPlayer *p;
+	int i;
+
+	m_Core.isactive[t] = 0;
+	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
+		if (clr && m_Core.RTeam(i) == t && (p = GameServer()->m_apPlayers[i]))
+			p->KillCharacter();
+		SendTeamsState(i);
+	}
+}
+
 void CGameTeams::OnCharacterDeath(int ClientID, int Weapon)
 {
+	toprevteam(ClientID, 1);
 	return;
 	m_Core.SetSolo(ClientID, false);
 

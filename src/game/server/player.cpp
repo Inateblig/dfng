@@ -297,7 +297,7 @@ void CPlayer::PostPostTick()
 {
 	if (m_ClientID >= MAX_CLIENTS - ndummies) {
 		if (!m_pCharacter)
-			GameServer()->RemoveDummy(m_ClientID);
+			GameServer()->rmdummy(m_ClientID);
 		return;
 	}
 	if(!Server()->ClientIngame(m_ClientID))
@@ -557,20 +557,16 @@ CCharacter *CPlayer::GetCharacter()
 
 void CPlayer::KillCharacter(int Weapon)
 {
-	int dest;
-
 	if (!m_pCharacter)
 		return;
-	dest = 0;
 	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies) {
-		if (GameServer()->DummyOf(m_ClientID, 0) < 0)
+		if (GameServer()->mkdummyof(m_ClientID) < 0)
 			return;
-		dest = 1;
-	}
-	if (dest)
 		m_pCharacter->Destroy();
-	else
-		m_pCharacter->Die(m_ClientID, Weapon);
+		goto del;
+	}
+	m_pCharacter->Die(m_ClientID, Weapon);
+del:
 	delete m_pCharacter;
 	m_pCharacter = 0;
 }

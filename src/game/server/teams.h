@@ -19,6 +19,9 @@ class CGameTeams
 	// could go around the startline on a map, leave one tee behind at
 	// start, go to the finish line, let the tee start and kill, allowing
 	// the team to finish instantly.
+public:
+	int prevteam[MAX_CLIENTS];
+private:
 	bool m_aTeeStarted[MAX_CLIENTS];
 	bool m_aTeeFinished[MAX_CLIENTS];
 	int m_aLastChat[MAX_CLIENTS];
@@ -83,6 +86,10 @@ public:
 	{
 		return m_pGameContext->Server();
 	}
+
+	void tmpteam(FPARS(int, cid, t));
+	void toprevteam(FPARS(int, cid, clr));
+	void deactivate(FPARS(int, t, clr));
 
 	void OnCharacterStart(int ClientID);
 	void OnCharacterFinish(int ClientID);

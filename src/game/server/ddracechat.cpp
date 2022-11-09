@@ -855,7 +855,7 @@ void CGameContext::ConLockTeam(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	int Team = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.Team(pResult->m_ClientID);
+	int Team = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.RTeam(pResult->m_ClientID);
 
 	bool Lock = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.TeamLocked(Team);
 

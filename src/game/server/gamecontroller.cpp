@@ -472,7 +472,7 @@ void IGameController::OnReset()
 int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
 	CCharacter *kch;
-	int s = 0; /* score */
+	int s;
 
 	if (!pKiller || Weapon == WEAPON_GAME)
 		return 0;
@@ -482,6 +482,7 @@ int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 		return 0;
 
 	Weapon -= NUM_WEAPONS;
+	s = 0;
 	#define CASE_SPIKE(C)\
 		case TILE_SPIKE_##C:\
 			s = g_Config.m_SvScoreSpike##C;\
@@ -499,6 +500,7 @@ int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 		CASE_SPIKE(BLACK);
 	}
 	#undef SPIKESOCRE
+
 	pKiller->m_Score += s;
 	if ((kch = pKiller->GetCharacter()))
 		GameServer()->MakeLaserTextPoints(kch->m_Pos, pKiller->GetCID(), s);

@@ -437,7 +437,7 @@ void CGameContext::SendChatTarget(int To, const char *pText, int Flags)
 void CGameContext::SendChatTeam(int Team, const char *pText)
 {
 	for(int i = 0; i < MAX_CLIENTS; i++)
-		if(((CGameControllerDDRace *)m_pController)->m_Teams.m_Core.Team(i) == Team)
+		if(((CGameControllerDDRace *)m_pController)->m_Teams.m_Core.RTeam(i) == Team)
 			SendChatTarget(i, pText);
 }
 
@@ -3544,7 +3544,7 @@ int CGameContext::TeamOf(int cid)
 	return TeamsCore()->Team(cid);
 }
 
-int CGameContext::AddDummy()
+int CGameContext::adddummy()
 {
 	int i, id;
 
@@ -3560,18 +3560,12 @@ found:
 	return id;
 }
 
-void CGameContext::RemoveDummy(int id)
+void CGameContext::rmdummy(int id)
 {
-	CPlayer *p;
-	int i, t;
+	int i;
 
 	if (!ndummies || id < MAX_CLIENTS - ndummies)
 		return;
-	if ((t = TeamOf(id))) {
-		TeamsCore()->isactive[t] = 0;
-		for (i = 0; i < MAX_CLIENTS - ndummies; i++)
-			Teams()->SendTeamsState(i);
-	}
 	OnClientDrop(id, 0);
 	if ((i = id) == MAX_CLIENTS - ndummies)
 		do
@@ -3579,12 +3573,12 @@ void CGameContext::RemoveDummy(int id)
 		while (++i < MAX_CLIENTS && !m_apPlayers[i]);
 }
 
-int CGameContext::DummyOf(FPARS(int, id, t))
+int CGameContext::mkdummyof(int id)
 {
 	CCharacter *dmy;
-	int did;
+	int t, did;
 
-	if ((did = AddDummy()) < 0)
+	if ((did = adddummy()) < 0)
 		return -1;
 
 	dmy = m_apPlayers[did]->GetCharacter();
@@ -3592,10 +3586,8 @@ int CGameContext::DummyOf(FPARS(int, id, t))
 	if (!dmy->m_FreezeTime)
 		dmy->Freeze();
 
-	if (t) {
-		Teams()->m_Core.isactive[t] = 1;
-		Teams()->SetCharacterTeam(did, t);
-	}
+	if ((t = TeamOf(id)))
+		Teams()->tmpteam(did, t);
 	return did;
 }
 

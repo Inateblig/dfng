@@ -282,9 +282,9 @@ public:
 	CTeamsCore *TeamsCore();
 	int TeamOf(int cid);
 
-	int AddDummy();
-	void RemoveDummy(int id);
-	int DummyOf(FPARS(int, id, t));
+	int adddummy();
+	void rmdummy(int id);
+	int mkdummyof(int id);
 
 	bool IsClientReady(int ClientID) const override;
 	bool IsClientPlayer(int ClientID) const override;

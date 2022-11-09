@@ -461,9 +461,6 @@ void CCharacter::FireWeapon()
 			else
 				GameServer()->CreateHammerHit(ProjStartPos, TeamMask());
 
-//			if(m_FreezeHammer)
-//				pTarget->Freeze();
-			Antibot()->OnHammerHit(m_pPlayer->GetCID(), pTarget->GetPlayer()->GetCID());
 			pTarget->TakeHammerHit(this);
 			Hits++;
 		}
@@ -2146,10 +2143,13 @@ bool CCharacter::Freeze()
 
 bool CCharacter::UnFreeze()
 {
-	if (m_pPlayer->GetCID() >= MAX_CLIENTS - ndummies) {
-		Destroy();
+	int cid;
+
+	if ((cid = m_pPlayer->GetCID()) >= MAX_CLIENTS - ndummies) {
+		Die(cid, WEAPON_SELF);
 		return 0;
 	}
+	Teams()->toprevteam(cid, 0);
 	if(m_FreezeTime > 0)
 	{
 		m_Armor = 10;
@@ -2374,6 +2374,7 @@ void CCharacter::DieSpikes(int tile) {
 	GameServer()->m_World.RemoveEntity(this);
 	Destroy();
 	GameServer()->CreateDeath(m_Pos, plrid);
+	Teams()->OnCharacterDeath(GetPlayer()->GetCID(), WEAPON_WORLD);
 }
 
 void CCharacter::Clone(int whom)
@@ -2395,7 +2396,7 @@ void CCharacter::Clone(int whom)
 
 void CCharacter::Hit(int From, int Weapon)
 {
-	int i, t, ft, cid;
+	int t, ft, cid;
 
 	cid = m_pPlayer->GetCID();
 	if (m_FreezeTime || From == cid)
@@ -2408,18 +2409,10 @@ void CCharacter::Hit(int From, int Weapon)
 	if (t && t == ft)
 		return;
 
-	if (ft && GameServer()->DummyOf(cid, ft) >= 0) {
-		for (i = 0; i < MAX_CLIENTS; i++)
-			if (i != cid && GameServer()->m_apPlayers[i] &&
-			!Teams()->m_Core.Team(i))
-				goto hasplr;
-		GameServer()->DummyOf(From, t);
-hasplr:
-		;
-	} else {
-		GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[From], Weapon);
-		Freeze();
-	}
+	if (ft)
+		Teams()->tmpteam(cid, ft);
+	GameServer()->m_pController->OnCharacterDeath(this, GameServer()->m_apPlayers[From], Weapon);
+	Freeze();
 
 	m_Core.m_Killer = From;
 
@@ -2443,23 +2436,33 @@ hasplr:
 
 void CCharacter::TakeHammerHit(CCharacter *pFrom)
 {
-	vec2 Dir;
+	vec2 p, dir;
+	float s;
 	int t, cid, from;
 
-	if (length(m_Pos - pFrom->m_Pos) > 0.0f)
-		Dir = normalize(m_Pos - pFrom->m_Pos);
+	if (!m_TuneZone)
+		s = GameServer()->Tuning()->m_HammerStrength;
 	else
-		Dir = vec2(0.f, -1.f);
+		s = GameServer()->TuningList()[m_TuneZone].m_HammerStrength;
 
-	vec2 Push = vec2(0.f, -1.f) + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f;
-	Push.x *= g_Config.m_SvHammerScaleX*0.01f;
-	Push.y *= g_Config.m_SvHammerScaleY*0.01f;
-	m_Core.m_Vel += Push;
+	if (!length(dir = m_Pos - pFrom->m_Pos))
+		dir = vec2(0.f, -1.f);
+	dir = normalize(dir);
+
+	p = vec2(0.f, -1.f) + normalize(dir + vec2(0.f, -1.1f)) * 10.f;
+	p.x *= s * g_Config.m_SvHammerScaleX / 100.f;
+	p.y *= s * g_Config.m_SvHammerScaleY / 100.f;
+
+	m_Core.m_Vel = ClampVel(m_MoveRestrictions, m_Core.m_Vel + p);
+
+	if (pFrom->m_FreezeHammer)
+		Freeze();
 
 	cid = m_pPlayer->GetCID();
 	from = m_Core.m_Killer = pFrom->m_pPlayer->GetCID();
+	Antibot()->OnHammerHit(from, cid);
 
-	if (cid < MAX_CLIENTS - ndummies && (t = Teams()->m_Core.RTeam(cid)) &&
+	if (Teams()->prevteam[cid] < 0 && (t = Teams()->m_Core.RTeam(cid)) &&
 	t == Teams()->m_Core.RTeam(from))
 		UnFreeze();
 }
