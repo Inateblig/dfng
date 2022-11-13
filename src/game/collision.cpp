@@ -288,33 +288,80 @@ int CCollision::GetTile(int x, int y) const
 	return 0;
 }
 
-// TODO: rewrite this smarter!
+static int
+getpntisn(ivec2 *isn, float *sc, vec2 pv, vec2 dv, const int in[2])
+{
+	float (*head[2])(float) = {&floorf, &ceilf};
+	float *d, *p;
+	float s, ms, f, fl;
+	int i, ii = 0;
+
+	p = &pv.x, d = &dv.x;
+	ms = 2.f;
+	for (i = 0; i < 2; i++) {
+		if (!d[i])
+			continue;
+		s = ((*head[d[i] > 0.f])(p[i]) - p[i]) / d[i];
+		if (!s && (d[i] > 0.f) == in[i])
+			s = 1.f / fabsf(d[i]);
+		if (ms > s)
+			ii = i, ms = s;
+	}
+	if (ms > 1.f)
+		return -1;
+	for (i = 0; i < 2; i++)
+		if (i != ii) {
+			fl = floorf(f = p[i] + ms * d[i]);
+			(&isn->x)[i] = fl - (f == fl && !in[i]);
+		}
+	(&isn->x)[ii] += d[ii] > 0.f ? 1.f : -1.f;
+	*sc = ms;
+	return ii; /* intesection index */
+}
+
+int
+CCollision::gettile(ivec2 *p) const
+{
+	int x, y;
+
+	if (!m_pTiles)
+		return 0;
+
+	x = clamp(p->x, 0, m_Width - 1);
+	y = clamp(p->y, 0, m_Height - 1);
+	return m_pTiles[y*m_Width + x].m_Index;
+}
+
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	float Distance = distance(Pos0, Pos1);
-	int End(Distance + 1);
-	vec2 Last = Pos0;
-	int ix = 0, iy = 0; // Temporary position for checking collision
-	for(int i = 0; i <= End; i++)
-	{
-		float a = i / (float)End;
-		vec2 Pos = mix(Pos0, Pos1, a);
-		ix = round_to_int(Pos.x);
-		iy = round_to_int(Pos.y);
+	vec2 p, d;
+	ivec2 tp, ptp;
+	float sc;
+	int in[2] = {1, 1};
+	int ii = 0, t;
 
-		if(CheckPoint(ix, iy))
-		{
+	p = Pos0;
+	tp = ivec2(p.x / 32.f, p.y / 32.f);
+	d = (Pos1 - Pos0) / 32.f;
+	ptp = tp;
+	do {
+		t = gettile(&tp);
+		if (t == TILE_SOLID || t == TILE_NOHOOK) {
 			if(pOutCollision)
-				*pOutCollision = Pos;
+				*pOutCollision = vec2(tp.x, tp.y) * 32.f;
 			if(pOutBeforeCollision)
-				*pOutBeforeCollision = Last;
-			return GetCollisionAt(ix, iy);
+				*pOutBeforeCollision = vec2(ptp.x, ptp.y) * 32.f;
+			return t;
 		}
-
-		Last = Pos;
-	}
+		ptp = tp;
+		if ((ii = getpntisn(&tp, &sc, p, d, in)) < 0)
+			break;
+		in[ii] = (&d.x)[ii] > 0.f;
+		p += d * sc;
+		d -= d * sc;
+	} while (1);
 	if(pOutCollision)
-		*pOutCollision = Pos1;
+		*pOutCollision = vec2(tp.x, tp.y) * 32.f;
 	if(pOutBeforeCollision)
 		*pOutBeforeCollision = Pos1;
 	return 0;
