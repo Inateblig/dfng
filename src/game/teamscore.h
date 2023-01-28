@@ -27,6 +27,8 @@ class CTeamsCore
 	bool m_aIsSolo[MAX_CLIENTS];
 
 public:
+	int activefor[MAX_CLIENTS];
+	bool isactive[NUM_TEAMS];
 	bool m_IsDDRace16;
 
 	CTeamsCore();
@@ -36,6 +38,7 @@ public:
 	bool CanKeepHook(int ClientID1, int ClientID2) const;
 	bool CanCollide(int ClientID1, int ClientID2) const;
 
+	int RTeam(int ClientID) const;
 	int Team(int ClientID) const;
 	void Team(int ClientID, int Team);
 

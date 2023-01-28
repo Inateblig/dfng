@@ -67,6 +67,7 @@ public:
 
 	IGameController(class CGameContext *pGameServer);
 	virtual ~IGameController();
+	virtual void DoWinCheck();
 
 	// event
 	/*
@@ -131,7 +132,7 @@ public:
 	virtual void Snap(int SnappingClient);
 
 	//spawn
-	virtual bool CanSpawn(int Team, vec2 *pOutPos, int DDTeam);
+	virtual bool CanSpawn(int Team, vec2 *pOutPos, int cid);
 
 	virtual void DoTeamChange(class CPlayer *pPlayer, int Team, bool DoChatMsg = true);
 	/*

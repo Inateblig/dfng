@@ -93,9 +93,7 @@ bool CLaser::HitCharacter(vec2 From, vec2 To)
 		}
 	}
 	else if(m_Type == WEAPON_LASER)
-	{
-		pHit->UnFreeze();
-	}
+		pHit->TakeDamage(vec2(0.f,0.f), GameServer()->Tuning()->m_LaserDamage, m_Owner, WEAPON_LASER);
 	return true;
 }
 

@@ -107,7 +107,9 @@ public:
 	void ResetRoundState(int Team);
 	void ResetSwitchers(int Team);
 
+	void deact(int cid);
 	void SendTeamsState(int ClientID);
+	void SendNewTeams();
 	void SetTeamLock(int Team, bool Lock);
 	void ResetInvited(int Team);
 	void SetClientInvited(int Team, int ClientID, bool Invited);

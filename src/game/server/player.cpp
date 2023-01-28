@@ -119,7 +119,7 @@ void CPlayer::Reset()
 	m_DND = false;
 
 	m_LastPause = 0;
-	m_Score = -9999;
+	m_Score = 0;
 	m_HasFinishScore = false;
 
 	// Variable initialized:
@@ -171,14 +171,8 @@ void CPlayer::Tick()
 		m_ScoreFinishResult = nullptr;
 	}
 
-	bool ClientIngame = Server()->ClientIngame(m_ClientID);
-#ifdef CONF_DEBUG
-	if(g_Config.m_DbgDummies && m_ClientID >= MAX_CLIENTS - g_Config.m_DbgDummies)
-	{
-		ClientIngame = true;
-	}
-#endif
-	if(!ClientIngame)
+	if (!Server()->ClientIngame(m_ClientID) &&
+	    m_ClientID < MAX_CLIENTS - ndummies)
 		return;
 
 	if(m_ChatScore > 0)
@@ -301,11 +295,13 @@ void CPlayer::PostTick()
 
 void CPlayer::PostPostTick()
 {
-#ifdef CONF_DEBUG
-	if(!g_Config.m_DbgDummies || m_ClientID < MAX_CLIENTS - g_Config.m_DbgDummies)
-#endif
-		if(!Server()->ClientIngame(m_ClientID))
-			return;
+	if (m_ClientID >= MAX_CLIENTS - ndummies) {
+		if (!m_pCharacter)
+			GameServer()->rmdummy(m_ClientID);
+		return;
+	}
+	if(!Server()->ClientIngame(m_ClientID))
+		return;
 
 	if(!GameServer()->m_World.m_Paused && !m_pCharacter && m_Spawning && m_WeakHookSpawn)
 		TryRespawn();
@@ -313,9 +309,7 @@ void CPlayer::PostPostTick()
 
 void CPlayer::Snap(int SnappingClient)
 {
-#ifdef CONF_DEBUG
-	if(!g_Config.m_DbgDummies || m_ClientID < MAX_CLIENTS - g_Config.m_DbgDummies)
-#endif
+	if (m_ClientID < MAX_CLIENTS - ndummies)
 		if(!Server()->ClientIngame(m_ClientID))
 			return;
 
@@ -337,11 +331,13 @@ void CPlayer::Snap(int SnappingClient)
 
 	int SnappingClientVersion = GameServer()->GetClientVersion(SnappingClient);
 	int Latency = SnappingClient == SERVER_DEMO_CLIENT ? m_Latency.m_Min : GameServer()->m_apPlayers[SnappingClient]->m_aCurLatency[m_ClientID];
-	int Score = abs(m_Score) * -1;
+	if (m_ClientID >= MAX_CLIENTS - ndummies)
+		Latency = 0;
+	int Score = m_Score;
 
 	// send 0 if times of others are not shown
 	if(SnappingClient != m_ClientID && g_Config.m_SvHideScore)
-		Score = -9999;
+		Score = 0;
 
 	if(!Server()->IsSixup(SnappingClient))
 	{
@@ -373,7 +369,7 @@ void CPlayer::Snap(int SnappingClient)
 			pPlayerInfo->m_PlayerFlags |= protocol7::PLAYERFLAG_ADMIN;
 
 		// Times are in milliseconds for 0.7
-		pPlayerInfo->m_Score = Score == -9999 ? -1 : -Score * 1000;
+//		pPlayerInfo->m_Score = Score == -9999 ? -1 : -Score * 1000;
 		pPlayerInfo->m_Latency = Latency;
 	}
 
@@ -408,7 +404,7 @@ void CPlayer::Snap(int SnappingClient)
 
 	pDDNetPlayer->m_AuthLevel = Server()->GetAuthedState(id);
 	pDDNetPlayer->m_Flags = 0;
-	if(m_Afk)
+	if(m_Afk && m_ClientID < MAX_CLIENTS - ndummies)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_AFK;
 	if(m_Paused == PAUSE_SPEC)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_SPEC;
@@ -472,7 +468,7 @@ void CPlayer::FakeSnap()
 	pPlayerInfo->m_Latency = m_Latency.m_Min;
 	pPlayerInfo->m_Local = 1;
 	pPlayerInfo->m_ClientID = FakeID;
-	pPlayerInfo->m_Score = -9999;
+	pPlayerInfo->m_Score = 0;
 	pPlayerInfo->m_Team = TEAM_SPECTATORS;
 
 	CNetObj_SpectatorInfo *pSpectatorInfo = static_cast<CNetObj_SpectatorInfo *>(Server()->SnapNewItem(NETOBJTYPE_SPECTATORINFO, FakeID, sizeof(CNetObj_SpectatorInfo)));
@@ -561,13 +557,23 @@ CCharacter *CPlayer::GetCharacter()
 
 void CPlayer::KillCharacter(int Weapon)
 {
-	if(m_pCharacter)
-	{
-		m_pCharacter->Die(m_ClientID, Weapon);
+	CTeamsCore *tc;
 
-		delete m_pCharacter;
-		m_pCharacter = 0;
+	if (!m_pCharacter)
+		return;
+
+	tc = GameServer()->TeamsCore();
+	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies) {
+		if (GameServer()->mkdummyof(m_ClientID, tc->Team(m_ClientID),
+		    tc->activefor[m_ClientID]) < 0)
+			return;
+		m_pCharacter->Destroy();
+		goto del;
 	}
+	m_pCharacter->Die(m_ClientID, Weapon);
+del:
+	delete m_pCharacter;
+	m_pCharacter = 0;
 }
 
 void CPlayer::Respawn(bool WeakHook)
@@ -665,18 +671,23 @@ void CPlayer::TryRespawn()
 {
 	vec2 SpawnPos;
 
-	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos, GameServer()->GetDDRaceTeam(m_ClientID)))
+	if(!GameServer()->m_pController->CanSpawn(m_Team, &SpawnPos, m_ClientID))
 		return;
 
-	m_WeakHookSpawn = false;
-	m_Spawning = false;
-	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World, GameServer()->GetLastPlayerInput(m_ClientID));
-	m_ViewPos = SpawnPos;
-	m_pCharacter->Spawn(this, SpawnPos);
+	SpawnAt(SpawnPos);
 	GameServer()->CreatePlayerSpawn(SpawnPos, GameServer()->m_pController->GetMaskForPlayerWorldEvent(m_ClientID));
 
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 		m_pCharacter->SetSolo(true);
+}
+
+void CPlayer::SpawnAt(vec2 pos)
+{
+	m_WeakHookSpawn = false;
+	m_Spawning = false;
+	m_pCharacter = new(m_ClientID) CCharacter(&GameServer()->m_World, GameServer()->GetLastPlayerInput(m_ClientID));
+	m_ViewPos = pos;
+	m_pCharacter->Spawn(this, pos);
 }
 
 void CPlayer::UpdatePlaytime()

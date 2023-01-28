@@ -126,6 +126,9 @@ void CProjectile::Tick()
 	if(pOwnerChar ? !pOwnerChar->GrenadeHitDisabled() : g_Config.m_SvHit)
 		pTargetChr = GameServer()->m_World.IntersectCharacter(PrevPos, ColPos, m_Freeze ? 1.0f : 6.0f, ColPos, pOwnerChar, m_Owner);
 
+	if (m_Type == WEAPON_GUN && pTargetChr)
+		pTargetChr->TakeDamage(vec2(0.f, 0.f), 0, m_Owner, m_Type);
+
 	if(m_LifeSpan > -1)
 		m_LifeSpan--;
 
@@ -233,7 +236,7 @@ void CProjectile::Tick()
 		}
 		else if(m_Type == WEAPON_GUN)
 		{
-			GameServer()->CreateDamageInd(CurPos, -atan2(m_Direction.x, m_Direction.y), 10, (m_Owner != -1) ? TeamMask : -1LL);
+//			GameServer()->CreateDamageInd(CurPos, -atan2(m_Direction.x, m_Direction.y), 10, (m_Owner != -1) ? TeamMask : -1LL);
 			m_MarkedForDestroy = true;
 			return;
 		}

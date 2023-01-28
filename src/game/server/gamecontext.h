@@ -19,6 +19,8 @@
 #include <memory>
 #include <string>
 
+#include <base/util.h>
+
 /*
 	Tick
 		Game Context (CGameContext::tick)
@@ -45,6 +47,8 @@ enum
 {
 	NUM_TUNEZONES = 256
 };
+
+extern int ndummies;
 
 class CCharacter;
 class CConfig;
@@ -208,6 +212,7 @@ public:
 	void CreateDeath(vec2 Pos, int ClientID, int64_t Mask = -1);
 	void CreateSound(vec2 Pos, int Sound, int64_t Mask = -1);
 	void CreateSoundGlobal(int Sound, int Target = -1);
+	void MakeLaserTextPoints(vec2 pos, int owner, int points);
 
 	enum
 	{
@@ -272,6 +277,14 @@ public:
 
 	void OnClientEngineJoin(int ClientID, bool Sixup) override;
 	void OnClientEngineDrop(int ClientID, const char *pReason) override;
+
+	class CGameTeams *Teams();
+	CTeamsCore *TeamsCore();
+	int TeamOf(int cid);
+
+	int adddummy();
+	void rmdummy(int id);
+	int mkdummyof(FPARS(int, id, t, f));
 
 	bool IsClientReady(int ClientID) const override;
 	bool IsClientPlayer(int ClientID) const override;
@@ -381,6 +394,8 @@ private:
 	static void ConRank(IConsole::IResult *pResult, void *pUserData);
 	static void ConBroadTime(IConsole::IResult *pResult, void *pUserData);
 	static void ConJoinTeam(IConsole::IResult *pResult, void *pUserData);
+	static void ConTeamPlay(IConsole::IResult *pResult, void *pUserData);
+	static void ConListTeams(IConsole::IResult *pResult, void *pUserData);
 	static void ConLockTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnlockTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConInviteTeam(IConsole::IResult *pResult, void *pUserData);

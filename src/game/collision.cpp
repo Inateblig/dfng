@@ -3,6 +3,7 @@
 #include <base/math.h>
 #include <base/system.h>
 #include <base/vmath.h>
+#include <base/util.h>
 
 #include <antibot/antibot_data.h>
 
@@ -288,34 +289,80 @@ int CCollision::GetTile(int x, int y) const
 	return 0;
 }
 
-// TODO: rewrite this smarter!
+intern int
+getpntisn(ivec2 *isn, float *sc, FPARS(vec2, pv, dv), const int in[2])
+{
+	float (*head[2])(float) = { &floorf, &ceilf };
+	float *d, *p;
+	float s, ms, f, fl;
+	int i, ii = 0;
+
+	p = &pv.x, d = &dv.x;
+	ms = 2.f;
+	for (i = 0; i < 2; i++) {
+		if (!d[i])
+			continue;
+		s = ((*head[d[i] > 0.f])(p[i]) - p[i]) / d[i];
+		if (!s && (d[i] > 0.f) == in[i])
+			s = 1.f / fabsf(d[i]);
+		if (ms > s)
+			ii = i, ms = s;
+	}
+	if (ms > 1.f)
+		return -1;
+	for (i = 0; i < 2; i++)
+		if (i != ii) {
+			fl = floorf(f = p[i] + ms * d[i]);
+			(&isn->x)[i] = fl - (f == fl && !in[i]);
+		}
+	(&isn->x)[ii] += d[ii] > 0.f ? 1.f : -1.f;
+	*sc = ms;
+	return ii; /* intesection index */
+}
+
+int
+CCollision::gettile(ivec2 p) const
+{
+	if (!m_pTiles)
+		return 0;
+	if (p.x < 0 || p.x >= m_Width ||
+	    p.y < 0 || p.y >= m_Height)
+		return 0;
+
+	return m_pTiles[p.y*m_Width + p.x].m_Index;
+}
+
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	float Distance = distance(Pos0, Pos1);
-	int End(Distance + 1);
-	vec2 Last = Pos0;
-	int ix = 0, iy = 0; // Temporary position for checking collision
-	for(int i = 0; i <= End; i++)
-	{
-		float a = i / (float)End;
-		vec2 Pos = mix(Pos0, Pos1, a);
-		ix = round_to_int(Pos.x);
-		iy = round_to_int(Pos.y);
+	vec2 p, d;
+	ivec2 tp, ptp;
+	float sc;
+	int in[2] = {1, 1};
+	int ii = 0, t;
 
-		if(CheckPoint(ix, iy))
-		{
-			if(pOutCollision)
-				*pOutCollision = Pos;
-			if(pOutBeforeCollision)
-				*pOutBeforeCollision = Last;
-			return GetCollisionAt(ix, iy);
+	p = Pos0;
+	tp = ivec2(p.x / 32.f, p.y / 32.f);
+	d = (Pos1 - Pos0) / 32.f;
+	ptp = tp;
+	do {
+		t = gettile(tp);
+		if (t == TILE_SOLID || t == TILE_NOHOOK) {
+			if (pOutCollision)
+				*pOutCollision = vec2(tp.x, tp.y) * 32.f;
+			if (pOutBeforeCollision)
+				*pOutBeforeCollision = vec2(ptp.x, ptp.y) * 32.f;
+			return t;
 		}
-
-		Last = Pos;
-	}
-	if(pOutCollision)
+		ptp = tp;
+		if ((ii = getpntisn(&tp, &sc, p, d, in)) < 0)
+			break;
+		in[ii] = (&d.x)[ii] > 0.f;
+		p += d * sc;
+		d -= d * sc;
+	} while (1);
+	if (pOutCollision)
 		*pOutCollision = Pos1;
-	if(pOutBeforeCollision)
+	if (pOutBeforeCollision)
 		*pOutBeforeCollision = Pos1;
 	return 0;
 }
@@ -826,6 +873,8 @@ bool CCollision::TileExists(int Index) const
 	if(m_pFront && ((m_pFront[Index].m_Index >= TILE_FREEZE && m_pFront[Index].m_Index <= TILE_TELE_LASER_DISABLE) || (m_pFront[Index].m_Index >= TILE_LFREEZE && m_pFront[Index].m_Index <= TILE_LUNFREEZE)))
 		return true;
 	if(m_pTele && (m_pTele[Index].m_Type == TILE_TELEIN || m_pTele[Index].m_Type == TILE_TELEINEVIL || m_pTele[Index].m_Type == TILE_TELECHECKINEVIL || m_pTele[Index].m_Type == TILE_TELECHECK || m_pTele[Index].m_Type == TILE_TELECHECKIN))
+		return true;
+	if (m_pTiles[Index].m_Index >= TILE_SPIKE_FIRST && m_pTiles[Index].m_Index <= TILE_SPIKE_LAST)
 		return true;
 	if(m_pSpeedup && m_pSpeedup[Index].m_Force > 0)
 		return true;

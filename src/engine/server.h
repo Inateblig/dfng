@@ -7,6 +7,7 @@
 
 #include <base/hash.h>
 #include <base/math.h>
+#include <base/util.h>
 
 #include "kernel.h"
 #include "message.h"
@@ -51,6 +52,7 @@ public:
 	virtual int MaxClients() const = 0;
 	virtual int ClientCount() const = 0;
 	virtual int DistinctClientCount() const = 0;
+	virtual void SetDummyName(FPARS(int, did, id)) = 0;
 	virtual const char *ClientName(int ClientID) const = 0;
 	virtual const char *ClientClan(int ClientID) const = 0;
 	virtual int ClientCountry(int ClientID) const = 0;

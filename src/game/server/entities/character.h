@@ -64,7 +64,11 @@ public:
 	void FireWeapon();
 
 	void Die(int Killer, int Weapon);
+	void DieSpikes(int tile);
+	void Hit(int From, int Weapon);
+	void TakeHammerHit(CCharacter *pFrom);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
+	void Clone(int whom);
 
 	bool Spawn(class CPlayer *pPlayer, vec2 Pos);
 	bool Remove();
@@ -102,7 +106,7 @@ private:
 	int m_LastWeapon;
 	int m_QueuedWeapon;
 
-	int m_ReloadTimer;
+	int m_ReloadTimer[NUM_WEAPONS];
 	int m_AttackTick;
 
 	int m_DamageTaken;

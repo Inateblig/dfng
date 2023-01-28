@@ -240,6 +240,7 @@ public:
 	std::set<int> m_AttachedPlayers;
 	void SetHookedPlayer(int HookedPlayer);
 
+	int m_Killer;
 	int m_ActiveWeapon;
 	struct WeaponStat
 	{

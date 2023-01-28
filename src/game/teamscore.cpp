@@ -9,12 +9,24 @@ CTeamsCore::CTeamsCore()
 
 bool CTeamsCore::SameTeam(int ClientID1, int ClientID2) const
 {
-	return m_aTeam[ClientID1] == TEAM_SUPER || m_aTeam[ClientID2] == TEAM_SUPER || m_aTeam[ClientID1] == m_aTeam[ClientID2];
+	return m_aTeam[ClientID1] == TEAM_SUPER || m_aTeam[ClientID2] == TEAM_SUPER ||
+		Team(ClientID1) == Team(ClientID2);
+}
+
+int CTeamsCore::RTeam(int ClientID) const
+{
+	return m_aTeam[ClientID];
 }
 
 int CTeamsCore::Team(int ClientID) const
 {
-	return m_aTeam[ClientID];
+	int af;
+
+	if ((af = activefor[ClientID]) < 0)
+		return 0;
+	if (af == ClientID || af == MAX_CLIENTS)
+		return RTeam(ClientID);
+	return Team(af);
 }
 
 void CTeamsCore::Team(int ClientID, int Team)
@@ -27,16 +39,18 @@ bool CTeamsCore::CanKeepHook(int ClientID1, int ClientID2) const
 {
 	if(m_aTeam[ClientID1] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) || m_aTeam[ClientID2] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) || ClientID1 == ClientID2)
 		return true;
-	return m_aTeam[ClientID1] == m_aTeam[ClientID2];
+	return SameTeam(ClientID1, ClientID2);
 }
 
 bool CTeamsCore::CanCollide(int ClientID1, int ClientID2) const
 {
-	if(m_aTeam[ClientID1] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) || m_aTeam[ClientID2] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) || ClientID1 == ClientID2)
+	if (m_aTeam[ClientID1] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) ||
+	    m_aTeam[ClientID2] == (m_IsDDRace16 ? VANILLA_TEAM_SUPER : TEAM_SUPER) ||
+	    ClientID1 == ClientID2)
 		return true;
 	if(m_aIsSolo[ClientID1] || m_aIsSolo[ClientID2])
 		return false;
-	return m_aTeam[ClientID1] == m_aTeam[ClientID2];
+	return SameTeam(ClientID1, ClientID2);
 }
 
 void CTeamsCore::Reset()
@@ -45,6 +59,7 @@ void CTeamsCore::Reset()
 
 	for(int i = 0; i < MAX_CLIENTS; ++i)
 	{
+		activefor[i] = -1;
 		if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
 			m_aTeam[i] = i;
 		else

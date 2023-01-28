@@ -359,7 +359,7 @@ const char *CGameTeams::SetCharacterTeam(int ClientID, int Team)
 		return "Invalid team number";
 	if(Team != TEAM_SUPER && m_aTeamState[Team] > TEAMSTATE_OPEN)
 		return "This team started already";
-	if(m_Core.Team(ClientID) == Team)
+	if(m_Core.RTeam(ClientID) == Team)
 		return "You are in this team already";
 	if(!Character(ClientID))
 		return "Your character is not valid";
@@ -386,29 +386,24 @@ void CGameTeams::SetForceCharacterTeam(int ClientID, int Team)
 {
 	m_aTeeStarted[ClientID] = false;
 	m_aTeeFinished[ClientID] = false;
-	int OldTeam = m_Core.Team(ClientID);
+	int OldTeam = m_Core.RTeam(ClientID);
 
-	if(Team != OldTeam && (OldTeam != TEAM_FLOCK || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO) && OldTeam != TEAM_SUPER && m_aTeamState[OldTeam] != TEAMSTATE_EMPTY)
-	{
-		bool NoElseInOldTeam = Count(OldTeam) <= 1;
-		if(NoElseInOldTeam)
-		{
-			m_aTeamState[OldTeam] = TEAMSTATE_EMPTY;
+	if (Team != OldTeam && (OldTeam != TEAM_FLOCK || g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO) &&
+	    OldTeam != TEAM_SUPER && m_aTeamState[OldTeam] != TEAMSTATE_EMPTY &&
+	    Count(OldTeam) <= 1) {
+		m_aTeamState[OldTeam] = TEAMSTATE_EMPTY;
 
-			// unlock team when last player leaves
-			SetTeamLock(OldTeam, false);
-			ResetRoundState(OldTeam);
-			// do not reset SaveTeamResult, because it should be logged into teehistorian even if the team leaves
-		}
+		// unlock team when last player leaves
+		SetTeamLock(OldTeam, false);
+		ResetRoundState(OldTeam);
+		// do not reset SaveTeamResult, because it should be logged into teehistorian even if the team leaves
 	}
 
 	m_Core.Team(ClientID, Team);
 
 	if(OldTeam != Team)
 	{
-		for(int LoopClientID = 0; LoopClientID < MAX_CLIENTS; ++LoopClientID)
-			if(GetPlayer(LoopClientID))
-				SendTeamsState(LoopClientID);
+		SendNewTeams();
 
 		if(GetPlayer(ClientID))
 		{
@@ -551,6 +546,29 @@ int64_t CGameTeams::TeamMask(int Team, int ExceptID, int Asker)
 	return Mask;
 }
 
+void CGameTeams::deact(int cid)
+{
+	int i, t, af;
+
+	af = m_Core.activefor[cid];
+	if (af < 0 || af == cid || af == MAX_CLIENTS)
+		return;
+
+	t = m_Core.Team(cid);
+	m_Core.activefor[cid] = -1;
+	m_Core.activefor[af] = -1;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+		if (m_Core.Team(i) == t && m_Core.activefor[i] != MAX_CLIENTS)
+			goto noempty;
+	for (i = 0; i < MAX_CLIENTS; i++)
+		if (m_Core.Team(i) == t && m_Core.activefor[i] == MAX_CLIENTS)
+			m_Core.activefor[i] = -1;
+noempty:
+	SendNewTeams();
+	return;
+}
+
 void CGameTeams::SendTeamsState(int ClientID)
 {
 	if(g_Config.m_SvTeam == SV_TEAM_FORCED_SOLO)
@@ -574,6 +592,15 @@ void CGameTeams::SendTeamsState(int ClientID)
 	{
 		Server()->SendMsg(&MsgLegacy, MSGFLAG_VITAL, ClientID);
 	}
+}
+
+void CGameTeams::SendNewTeams()
+{
+	int i;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+		if (GetPlayer(i))
+			SendTeamsState(i);
 }
 
 int CGameTeams::GetDDRaceState(CPlayer *Player)
@@ -1016,8 +1043,9 @@ void CGameTeams::ProcessSaveTeam()
 void CGameTeams::OnCharacterSpawn(int ClientID)
 {
 	m_Core.SetSolo(ClientID, false);
-	int Team = m_Core.Team(ClientID);
+	return;
 
+	int Team = m_Core.Team(ClientID);
 	if(GetSaving(Team))
 		return;
 
@@ -1034,6 +1062,8 @@ void CGameTeams::OnCharacterSpawn(int ClientID)
 void CGameTeams::OnCharacterDeath(int ClientID, int Weapon)
 {
 	m_Core.SetSolo(ClientID, false);
+	deact(ClientID);
+	return;
 
 	int Team = m_Core.Team(ClientID);
 	if(GetSaving(Team))

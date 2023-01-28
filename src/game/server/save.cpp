@@ -107,7 +107,7 @@ void CSaveTee::Save(CCharacter *pChr)
 	m_InputFire = pChr->m_SavedInput.m_Fire;
 	m_InputHook = pChr->m_SavedInput.m_Hook;
 
-	m_ReloadTimer = pChr->m_ReloadTimer;
+	m_ReloadTimer = pChr->m_ReloadTimer[0];
 
 	FormatUuid(pChr->GameServer()->GameUuid(), m_aGameUuid, sizeof(m_aGameUuid));
 }
@@ -211,7 +211,7 @@ void CSaveTee::Load(CCharacter *pChr, int Team, bool IsSwap)
 	pChr->m_SavedInput.m_Fire = m_InputFire;
 	pChr->m_SavedInput.m_Hook = m_InputHook;
 
-	pChr->m_ReloadTimer = m_ReloadTimer;
+	pChr->m_ReloadTimer[0] = m_ReloadTimer;
 
 	pChr->SetSolo(m_IsSolo);
 

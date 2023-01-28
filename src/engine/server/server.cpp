@@ -32,6 +32,7 @@
 #include <engine/shared/snapshot.h>
 
 #include <game/version.h>
+#include <game/server/gamecontext.h>
 
 // DDRace
 #include <engine/shared/linereader.h>
@@ -322,6 +323,10 @@ CServer::CServer()
 		m_apCurrentMapData[i] = 0;
 		m_aCurrentMapSize[i] = 0;
 	}
+
+	int i;
+	for (i = 0; i < MAX_CLIENTS; i++)
+		dummynm[i][0] = 0;
 
 	m_MapReload = false;
 	m_ReloadedWhenEmpty = false;
@@ -622,8 +627,15 @@ void CServer::GetClientAddr(int ClientID, char *pAddrStr, int Size) const
 		net_addr_str(m_NetServer.ClientAddr(ClientID), pAddrStr, Size, false);
 }
 
+void CServer::SetDummyName(FPARS(int, did, id))
+{
+	snprintf(dummynm[did], sizeof dummynm[0], "D %s D", ClientName(id));
+}
+
 const char *CServer::ClientName(int ClientID) const
 {
+	if (ClientID >= MAX_CLIENTS - ndummies)
+		return dummynm[ClientID];
 	if(ClientID < 0 || ClientID >= MAX_CLIENTS || m_aClients[ClientID].m_State == CServer::CClient::STATE_EMPTY)
 		return "(invalid)";
 	if(m_aClients[ClientID].m_State == CServer::CClient::STATE_INGAME)

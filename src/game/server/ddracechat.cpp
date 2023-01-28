@@ -855,7 +855,7 @@ void CGameContext::ConLockTeam(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	int Team = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.Team(pResult->m_ClientID);
+	int Team = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.RTeam(pResult->m_ClientID);
 
 	bool Lock = ((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.TeamLocked(Team);
 
@@ -883,7 +883,7 @@ void CGameContext::ConLockTeam(IConsole::IResult *pResult, void *pUserData)
 	{
 		((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.SetTeamLock(Team, true);
 
-		str_format(aBuf, sizeof(aBuf), "'%s' locked your team. After the race starts, killing will kill everyone in your team.", pSelf->Server()->ClientName(pResult->m_ClientID));
+		str_format(aBuf, sizeof(aBuf), "'%s' locked your team", pSelf->Server()->ClientName(pResult->m_ClientID));
 		pSelf->SendChatTeam(Team, aBuf);
 	}
 }
@@ -1028,11 +1028,17 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 		}
 		else
 		{
+			int t, cid;
 			int Team = pResult->GetInteger(0);
 
 			if(Team < 0 || Team >= MAX_CLIENTS)
 				Team = pController->m_Teams.GetFirstEmptyTeam();
 
+			cid = pPlayer->GetCID();
+			if ((t = pSelf->TeamsCore()->Team(cid)) && t == pSelf->TeamsCore()->RTeam(cid)) {
+				pSelf->SendChatTarget(cid, "You cannot change team now!");
+				return;
+			}
 			if(pPlayer->m_Last_Team + (int64_t)pSelf->Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > pSelf->Server()->Tick())
 			{
 				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
@@ -1085,10 +1091,58 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 				aBuf,
 				sizeof(aBuf),
 				"You are in team %d",
-				((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.Team(pResult->m_ClientID));
+				((CGameControllerDDRace *)pSelf->m_pController)->m_Teams.m_Core.RTeam(pResult->m_ClientID));
 			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 				aBuf);
 		}
+	}
+}
+
+void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	int i, t, cid;
+
+	cid = pResult->m_ClientID;
+	if (!CheckClientID(cid) || !pSelf->m_apPlayers[cid])
+		return;
+
+	t = pSelf->TeamsCore()->RTeam(cid);
+	if (!t) {
+		pSelf->SendChatTarget(cid, "No /team0play!");
+		return;
+	}
+	if (pSelf->TeamsCore()->activefor[cid] < 0) {
+		pSelf->SendChatTarget(cid, "You can't teamplay while frozen!");
+		return;
+	}
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+		if (pSelf->TeamOf(i) == t)
+			goto found;
+	pSelf->SendChatTarget(cid, "Your team has no active frozen dummies!");
+	return;
+found:
+	pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
+	pSelf->Teams()->SendNewTeams();
+}
+
+void CGameContext::ConListTeams(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	int i, cid;
+	char buf[128];
+
+	cid = pResult->m_ClientID;
+	if (!CheckClientID(cid) || !pSelf->m_apPlayers[cid])
+		return;
+
+	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
+		if (!CheckClientID(i) || !pSelf->m_apPlayers[i])
+			continue;
+		snprintf(buf, sizeof buf, "%2d: %s", pSelf->TeamsCore()->RTeam(i),
+			pSelf->Server()->ClientName(i));
+		pSelf->SendChatTarget(cid, buf);
 	}
 }
 

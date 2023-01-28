@@ -28,7 +28,6 @@ private:
 	CGameWorld *m_pGameWorld;
 	CCollision *m_pCCollision;
 
-	int m_ID;
 	int m_ObjType;
 
 	/*
@@ -38,6 +37,7 @@ private:
 	float m_ProximityRadius;
 
 protected:
+	int m_ID;
 	/* State */
 	bool m_MarkedForDestroy;
 

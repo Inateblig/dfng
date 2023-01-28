@@ -107,6 +107,7 @@ void CCharacterCore::Reset()
 	m_HookTick = 0;
 	m_HookState = HOOK_IDLE;
 	SetHookedPlayer(-1);
+	m_Killer = -1;
 	m_AttachedPlayers.clear();
 	m_Jumped = 0;
 	m_JumpedTotal = 0;
@@ -660,6 +661,8 @@ void CCharacterCore::SetHookedPlayer(int HookedPlayer)
 			CCharacterCore *pCharCore = m_pWorld->m_apCharacters[HookedPlayer];
 			if(pCharCore)
 			{
+				if (pCharCore->m_AttachedPlayers.empty())
+					pCharCore->m_Killer = m_Id;
 				pCharCore->m_AttachedPlayers.insert(m_Id);
 			}
 		}

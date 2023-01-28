@@ -210,6 +210,25 @@ MACRO_CONFIG_INT(ClVideoShowDirection, cl_video_show_direction, 0, 0, 2, CFGFLAG
 MACRO_CONFIG_INT(ClVideoX264Crf, cl_video_crf, 18, 0, 51, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Set crf when encode video with libx264 (0 for highest quality, 51 for lowest)")
 MACRO_CONFIG_INT(ClVideoX264Preset, cl_video_preset, 5, 0, 9, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Set preset when encode video with libx264, default is 5 (medium), 0 is ultrafast, 9 is placebo (the slowest, not recommend)")
 
+MACRO_CONFIG_INT(SvHammerScaleX, sv_hammer_scale_x, 320, 1, 1000, CFGFLAG_SERVER, "linearly scale up hammer x power, percentage")
+MACRO_CONFIG_INT(SvHammerScaleY, sv_hammer_scale_y, 120, 1, 1000, CFGFLAG_SERVER, "linearly scale up hammer y power, percentage")
+
+MACRO_CONFIG_INT(SvScorelimit, sv_scorelimit, 20, 0, 100000, CFGFLAG_SERVER, "Score limit (0 disables)")
+MACRO_CONFIG_INT(SvTimelimit, sv_timelimit, 0, 0, 1000, CFGFLAG_SERVER, "Time limit in minutes (0 disables)")
+
+MACRO_CONFIG_INT(SvScoreSpikeRED, sv_score_spike_red, 5, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeORANGE, sv_score_spike_orange, 4, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeYELLOW, sv_score_spike_yellow, 12, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeGREEN, sv_score_spike_green, 8, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeLBLUE, sv_score_spike_lblue, 2, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeBLUE, sv_score_spike_blue, 3, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spikes")
+MACRO_CONFIG_INT(SvScoreSpikePURPLE, sv_score_spike_purple, 10, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikePINK, sv_score_spike_pink, 6, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeWHITE, sv_score_spike_white, 1, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+MACRO_CONFIG_INT(SvScoreSpikeBLACK, sv_score_spike_black, 15, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
+
+MACRO_CONFIG_INT(SvGiveWeapon, sv_give_weapon, 1, 1, 4, CFGFLAG_SERVER, "weapon to give on spawn")
+
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly
 MACRO_CONFIG_INT(DbgDummies, dbg_dummies, 0, 0, 15, CFGFLAG_SERVER, "(Debug build only)")

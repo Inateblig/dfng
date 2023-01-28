@@ -213,6 +213,7 @@ public:
 		bool m_Sixup;
 	};
 
+	char dummynm[MAX_CLIENTS][MAX_NAME_LENGTH];
 	CClient m_aClients[MAX_CLIENTS];
 	int m_aIdMap[MAX_CLIENTS * VANILLA_MAX_CLIENTS];
 
@@ -277,6 +278,7 @@ public:
 	bool SetClientNameImpl(int ClientID, const char *pNameRequest, bool Set);
 
 	bool WouldClientNameChange(int ClientID, const char *pNameRequest) override;
+	void SetDummyName(FPARS(int, did, id)) override;
 	void SetClientName(int ClientID, const char *pName) override;
 	void SetClientClan(int ClientID, char const *pClan) override;
 	void SetClientCountry(int ClientID, int Country) override;

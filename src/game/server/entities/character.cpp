@@ -75,7 +75,7 @@ bool CCharacter::Spawn(CPlayer *pPlayer, vec2 Pos)
 
 	m_Core.Reset();
 	m_Core.Init(&GameServer()->m_World.m_Core, Collision());
-	m_Core.m_ActiveWeapon = WEAPON_GUN;
+	m_Core.m_ActiveWeapon = g_Config.m_SvGiveWeapon;
 	m_Core.m_Pos = m_Pos;
 	m_Core.m_Id = m_pPlayer->GetCID();
 	GameServer()->m_World.m_Core.m_apCharacters[m_pPlayer->GetCID()] = &m_Core;
@@ -319,7 +319,7 @@ void CCharacter::HandleNinja()
 void CCharacter::DoWeaponSwitch()
 {
 	// make sure we can switch
-	if(m_ReloadTimer != 0 || m_QueuedWeapon == -1 || m_Core.m_aWeapons[WEAPON_NINJA].m_Got || !m_Core.m_aWeapons[m_QueuedWeapon].m_Got)
+	if(m_QueuedWeapon == -1 || m_Core.m_aWeapons[WEAPON_NINJA].m_Got || !m_Core.m_aWeapons[m_QueuedWeapon].m_Got)
 		return;
 
 	// switch Weapon
@@ -375,7 +375,7 @@ void CCharacter::HandleWeaponSwitch()
 
 void CCharacter::FireWeapon()
 {
-	if(m_ReloadTimer != 0)
+	if(m_ReloadTimer[m_Core.m_ActiveWeapon] != 0)
 	{
 		if(m_LatestInput.m_Fire & 1)
 		{
@@ -388,8 +388,8 @@ void CCharacter::FireWeapon()
 	vec2 Direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
 
 	bool FullAuto = false;
-	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
-		FullAuto = true;
+//	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
+//		FullAuto = true;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	// allow firing directly after coming out of freeze or being unfrozen
@@ -461,30 +461,7 @@ void CCharacter::FireWeapon()
 			else
 				GameServer()->CreateHammerHit(ProjStartPos, TeamMask());
 
-			vec2 Dir;
-			if(length(pTarget->m_Pos - m_Pos) > 0.0f)
-				Dir = normalize(pTarget->m_Pos - m_Pos);
-			else
-				Dir = vec2(0.f, -1.f);
-
-			float Strength;
-			if(!m_TuneZone)
-				Strength = GameServer()->Tuning()->m_HammerStrength;
-			else
-				Strength = GameServer()->TuningList()[m_TuneZone].m_HammerStrength;
-
-			vec2 Temp = pTarget->m_Core.m_Vel + normalize(Dir + vec2(0.f, -1.1f)) * 10.0f;
-			Temp = ClampVel(pTarget->m_MoveRestrictions, Temp);
-			Temp -= pTarget->m_Core.m_Vel;
-			pTarget->TakeDamage((vec2(0.f, -1.0f) + Temp) * Strength, g_pData->m_Weapons.m_Hammer.m_pBase->m_Damage,
-				m_pPlayer->GetCID(), m_Core.m_ActiveWeapon);
-			pTarget->UnFreeze();
-
-			if(m_FreezeHammer)
-				pTarget->Freeze();
-
-			Antibot()->OnHammerHit(m_pPlayer->GetCID(), pTarget->GetPlayer()->GetCID());
-
+			pTarget->TakeHammerHit(this);
 			Hits++;
 		}
 
@@ -496,7 +473,7 @@ void CCharacter::FireWeapon()
 				FireDelay = GameServer()->Tuning()->m_HammerHitFireDelay;
 			else
 				FireDelay = GameServer()->TuningList()[m_TuneZone].m_HammerHitFireDelay;
-			m_ReloadTimer = FireDelay * Server()->TickSpeed() / 1000;
+			m_ReloadTimer[m_Core.m_ActiveWeapon] = FireDelay * Server()->TickSpeed() / 1000;
 		}
 	}
 	break;
@@ -596,14 +573,14 @@ void CCharacter::FireWeapon()
 
 	m_AttackTick = Server()->Tick();
 
-	if(!m_ReloadTimer)
+	if(!m_ReloadTimer[m_Core.m_ActiveWeapon])
 	{
 		float FireDelay;
 		if(!m_TuneZone)
 			GameServer()->Tuning()->Get(38 + m_Core.m_ActiveWeapon, &FireDelay);
 		else
 			GameServer()->TuningList()[m_TuneZone].Get(38 + m_Core.m_ActiveWeapon, &FireDelay);
-		m_ReloadTimer = FireDelay * Server()->TickSpeed() / 1000;
+		m_ReloadTimer[m_Core.m_ActiveWeapon] = FireDelay * Server()->TickSpeed() / 1000;
 	}
 }
 
@@ -617,9 +594,9 @@ void CCharacter::HandleWeapons()
 		m_PainSoundTimer--;
 
 	// check reload timer
-	if(m_ReloadTimer)
+	if(m_ReloadTimer[m_Core.m_ActiveWeapon])
 	{
-		m_ReloadTimer--;
+		m_ReloadTimer[m_Core.m_ActiveWeapon]--;
 		return;
 	}
 
@@ -956,6 +933,8 @@ bool CCharacter::TakeDamage(vec2 Force, int Dmg, int From, int Weapon)
 
 	vec2 Temp = m_Core.m_Vel + Force;
 	m_Core.m_Vel = ClampVel(m_MoveRestrictions, Temp);
+
+	Hit(From, Weapon);
 
 	return true;
 }
@@ -1428,6 +1407,11 @@ void CCharacter::HandleTiles(int Index)
 
 	GameServer()->m_pController->HandleCharacterTiles(this, Index);
 
+	int t;
+	if (((t = m_TileIndex) >= TILE_SPIKE_FIRST && t <= TILE_SPIKE_LAST) ||
+	    ((t = m_TileFIndex) >= TILE_SPIKE_FIRST && t <= TILE_SPIKE_LAST))
+		DieSpikes(t);
+
 	// freeze
 	if(((m_TileIndex == TILE_FREEZE) || (m_TileFIndex == TILE_FREEZE)) && !m_Core.m_Super && !m_Core.m_DeepFrozen)
 	{
@@ -1881,7 +1865,7 @@ void CCharacter::HandleTiles(int Index)
 		}
 		// if no checkpointout have been found (or if there no recorded checkpoint), teleport to start
 		vec2 SpawnPos;
-		if(GameServer()->m_pController->CanSpawn(m_pPlayer->GetTeam(), &SpawnPos, GameServer()->GetDDRaceTeam(GetPlayer()->GetCID())))
+		if(GameServer()->m_pController->CanSpawn(m_pPlayer->GetTeam(), &SpawnPos, GetPlayer()->GetCID()))
 		{
 			m_Core.m_Pos = SpawnPos;
 			m_Core.m_Vel = vec2(0, 0);
@@ -1916,7 +1900,7 @@ void CCharacter::HandleTiles(int Index)
 		}
 		// if no checkpointout have been found (or if there no recorded checkpoint), teleport to start
 		vec2 SpawnPos;
-		if(GameServer()->m_pController->CanSpawn(m_pPlayer->GetTeam(), &SpawnPos, GameServer()->GetDDRaceTeam(GetPlayer()->GetCID())))
+		if(GameServer()->m_pController->CanSpawn(m_pPlayer->GetTeam(), &SpawnPos, GetPlayer()->GetCID()))
 		{
 			m_Core.m_Pos = SpawnPos;
 
@@ -2159,6 +2143,16 @@ bool CCharacter::Freeze()
 
 bool CCharacter::UnFreeze()
 {
+	int cid;
+
+	cid = m_pPlayer->GetCID();
+	Teams()->deact(cid);
+
+	if (cid >= MAX_CLIENTS - ndummies) {
+		Die(cid, WEAPON_SELF);
+		return 0;
+	}
+
 	if(m_FreezeTime > 0)
 	{
 		m_Armor = 10;
@@ -2337,4 +2331,146 @@ int64_t CCharacter::TeamMask()
 void CCharacter::SwapClients(int Client1, int Client2)
 {
 	m_Core.SetHookedPlayer(m_Core.m_HookedPlayer == Client1 ? Client2 : m_Core.m_HookedPlayer == Client2 ? Client1 : m_Core.m_HookedPlayer);
+}
+
+void CCharacter::DieSpikes(int tile)
+{
+	CCharacter *kch;
+	CNetMsg_Sv_KillMsg msg;
+	int plrid, klrid;
+
+	plrid = m_pPlayer->GetCID();
+
+	if (!m_FreezeTime || m_Core.m_Killer < 0) {
+		msg.m_Killer = plrid;
+		msg.m_Weapon = WEAPON_WORLD;
+		GameServer()->m_pController->OnCharacterDeath(this, 0, WEAPON_WORLD);
+	} else {
+		msg.m_Killer = klrid = m_Core.m_Killer;
+		msg.m_Weapon = WEAPON_NINJA;
+		GameServer()->m_pController->OnCharacterDeath(this,
+			GameServer()->m_apPlayers[klrid], NUM_WEAPONS + tile);
+
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "kill spikes killer='%d:%s' victim='%d:%s' tile=%d",
+			klrid, Server()->ClientName(klrid), plrid,
+			Server()->ClientName(plrid), tile);
+		GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+
+		// set attacker's face to happy (taunt!)
+		if ((kch = GameServer()->m_apPlayers[klrid]->GetCharacter()))
+			kch->SetEmote(EMOTE_HAPPY, Server()->Tick() + Server()->TickSpeed());
+
+		GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE, klrid);
+		GameServer()->CreateSoundGlobal(SOUND_CTF_GRAB_PL, plrid);
+	}
+	msg.m_Victim = plrid;
+	msg.m_ModeSpecial = 0;
+	Server()->SendPackMsg(&msg, MSGFLAG_VITAL, -1);
+
+	GameServer()->CreateSound(m_Pos, SOUND_PLAYER_DIE);
+
+	m_pPlayer->m_DieTick = Server()->Tick();
+
+	GameServer()->m_World.RemoveEntity(this);
+	GameServer()->CreateDeath(m_Pos, plrid);
+	Teams()->OnCharacterDeath(plrid, WEAPON_WORLD);
+	Destroy();
+}
+
+void CCharacter::Clone(int whom)
+{
+	CCharacter *ch;
+	CCharacterCore *c;
+	int cid;
+
+	ch = GameServer()->m_apPlayers[whom]->GetCharacter();
+	m_Core = ch->GetCore();
+	m_FreezeTime = ch->m_FreezeTime;
+
+	cid = m_pPlayer->GetCID();
+	for (auto &id: m_Core.m_AttachedPlayers) {
+		c = GameServer()->m_apPlayers[id]->GetCharacter()->Core();
+		c->SetHookedPlayer(cid);
+	}
+}
+
+void CCharacter::Hit(int From, int Weapon)
+{
+	CPlayer *klr;
+	int t, ft, cid;
+
+	cid = m_pPlayer->GetCID();
+	if (m_FreezeTime || From == cid)
+		return;
+	if (cid >= MAX_CLIENTS - ndummies)
+		return;
+
+	ft = Teams()->m_Core.RTeam(From);
+	t = Teams()->m_Core.RTeam(cid);
+	if (t && t == ft)
+		return;
+
+	Freeze();
+	if (ft) {
+		Teams()->m_Core.activefor[cid] = From;
+		Teams()->m_Core.activefor[From] = From;
+		Teams()->SendNewTeams();
+	}
+
+	klr = GameServer()->m_apPlayers[From];
+	klr->GetCharacter()->m_ReloadTimer[Weapon] = 1; /* 0 won't always work */
+
+	GameServer()->m_pController->OnCharacterDeath(this, klr, Weapon);
+	m_Core.m_Killer = From;
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "hit killer='%d:%s' victim='%d:%s' weapon=%d",
+		From, Server()->ClientName(From),
+		m_pPlayer->GetCID(), Server()->ClientName(m_pPlayer->GetCID()), Weapon);
+	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
+
+	// send the kill message
+	CNetMsg_Sv_KillMsg Msg;
+	Msg.m_Killer = From;
+	Msg.m_Victim = m_pPlayer->GetCID();
+	Msg.m_Weapon = Weapon;
+	Msg.m_ModeSpecial = 0;
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, -1);
+
+	GameServer()->CreateSoundGlobal(SOUND_HIT, From);
+	GameServer()->CreateDeath(m_Pos, m_pPlayer->GetCID());
+}
+
+void CCharacter::TakeHammerHit(CCharacter *pFrom)
+{
+	vec2 p, dir;
+	float s;
+	int t, cid, from;
+
+	if (!m_TuneZone)
+		s = GameServer()->Tuning()->m_HammerStrength;
+	else
+		s = GameServer()->TuningList()[m_TuneZone].m_HammerStrength;
+
+	if (!length(dir = m_Pos - pFrom->m_Pos))
+		dir = vec2(0.f, -1.f);
+	dir = normalize(dir);
+
+	p = vec2(0.f, -1.f) + normalize(dir + vec2(0.f, -1.1f)) * 10.f;
+	p.x *= s * g_Config.m_SvHammerScaleX / 100.f;
+	p.y *= s * g_Config.m_SvHammerScaleY / 100.f;
+
+	m_Core.m_Vel = ClampVel(m_MoveRestrictions, m_Core.m_Vel + p);
+
+	if (pFrom->m_FreezeHammer)
+		Freeze();
+
+	cid = m_pPlayer->GetCID();
+	from = m_Core.m_Killer = pFrom->m_pPlayer->GetCID();
+	Antibot()->OnHammerHit(from, cid);
+
+	if (cid < MAX_CLIENTS -ndummies && (t = Teams()->m_Core.RTeam(cid)) &&
+	    t == Teams()->m_Core.RTeam(from))
+		UnFreeze();
 }
