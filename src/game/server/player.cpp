@@ -402,7 +402,7 @@ void CPlayer::Snap(int SnappingClient)
 	if(!pDDNetPlayer)
 		return;
 
-	pDDNetPlayer->m_AuthLevel = Server()->GetAuthedState(id);
+	// pDDNetPlayer->m_AuthLevel = Server()->GetAuthedState(id);
 	pDDNetPlayer->m_Flags = 0;
 	if(m_Afk && m_ClientID < MAX_CLIENTS - ndummies)
 		pDDNetPlayer->m_Flags |= EXPLAYERFLAG_AFK;
