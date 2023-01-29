@@ -3583,10 +3583,10 @@ void CGameContext::rmdummy(int id)
 		while (++i < MAX_CLIENTS && !m_apPlayers[i]);
 }
 
-int CGameContext::mkdummyof(FPARS(int, id, t, f))
+int CGameContext::mkdummyof(int id)
 {
 	CCharacter *dmy;
-	int did;
+	int t, af, did;
 
 	if ((did = adddummy()) < 0)
 		return -1;
@@ -3595,13 +3595,13 @@ int CGameContext::mkdummyof(FPARS(int, id, t, f))
 	dmy->Clone(id);
 	Server()->SetDummyName(did, id);
 
-	if (!dmy->m_FreezeTime)
-		dmy->Freeze();
-
-	Teams()->m_Core.activefor[id] = -1;
+	t = TeamOf(id);
 	if (t) {
-		Teams()->m_Core.activefor[f] = did;
-		Teams()->m_Core.activefor[did] = did;
+		af = Teams()->m_Core.activefor[id];
+		if (af >= 0 && af < MAX_CLIENTS) {
+			Teams()->m_Core.activefor[id] = -1;
+			Teams()->m_Core.activefor[did] = af;
+		}
 		Teams()->SetCharacterTeam(did, t);
 	}
 

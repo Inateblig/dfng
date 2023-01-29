@@ -562,6 +562,7 @@ void CGameTeams::deact(int cid)
 	for (i = 0; i < MAX_CLIENTS; i++)
 		if (m_Core.Team(i) == t && m_Core.activefor[i] != MAX_CLIENTS)
 			goto noempty;
+	/* t has no active kills, move all /teamplayers out of it */
 	for (i = 0; i < MAX_CLIENTS; i++)
 		if (m_Core.Team(i) == t && m_Core.activefor[i] == MAX_CLIENTS)
 			m_Core.activefor[i] = -1;

@@ -557,15 +557,11 @@ CCharacter *CPlayer::GetCharacter()
 
 void CPlayer::KillCharacter(int Weapon)
 {
-	CTeamsCore *tc;
-
 	if (!m_pCharacter)
 		return;
 
-	tc = GameServer()->TeamsCore();
 	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies) {
-		if (GameServer()->mkdummyof(m_ClientID, tc->Team(m_ClientID),
-		    tc->activefor[m_ClientID]) < 0)
+		if (GameServer()->mkdummyof(m_ClientID) < 0)
 			return;
 		m_pCharacter->Destroy();
 		goto del;

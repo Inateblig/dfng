@@ -284,7 +284,7 @@ public:
 
 	int adddummy();
 	void rmdummy(int id);
-	int mkdummyof(FPARS(int, id, t, f));
+	int mkdummyof(int id);
 
 	bool IsClientReady(int ClientID) const override;
 	bool IsClientPlayer(int ClientID) const override;
