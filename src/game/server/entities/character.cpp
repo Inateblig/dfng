@@ -388,8 +388,8 @@ void CCharacter::FireWeapon()
 	vec2 Direction = normalize(vec2(m_LatestInput.m_TargetX, m_LatestInput.m_TargetY));
 
 	bool FullAuto = false;
-//	if(m_Core.m_ActiveWeapon == WEAPON_GRENADE || m_Core.m_ActiveWeapon == WEAPON_SHOTGUN || m_Core.m_ActiveWeapon == WEAPON_LASER)
-//		FullAuto = true;
+	if(m_Core.m_ActiveWeapon != WEAPON_HAMMER)
+		FullAuto = true;
 	if(m_Core.m_Jetpack && m_Core.m_ActiveWeapon == WEAPON_GUN)
 		FullAuto = true;
 	// allow firing directly after coming out of freeze or being unfrozen
@@ -2419,7 +2419,7 @@ void CCharacter::Hit(int From, int Weapon)
 	}
 
 	klr = GameServer()->m_apPlayers[From];
-	klr->GetCharacter()->m_ReloadTimer[Weapon] = 1; /* 0 won't always work */
+	klr->GetCharacter()->m_ReloadTimer[Weapon] = 10; /* 0 won't always work */
 
 	GameServer()->m_pController->OnCharacterDeath(this, klr, Weapon);
 	m_Core.m_Killer = From;
