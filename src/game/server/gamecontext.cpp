@@ -2411,6 +2411,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
 			}
 
+			m_pController->UpdatePlayerColor(pPlayer);
 			Server()->ExpireServerInfo();
 		}
 		else if(MsgID == NETMSGTYPE_CL_EMOTICON && !m_World.m_Paused)

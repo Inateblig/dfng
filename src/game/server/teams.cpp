@@ -404,6 +404,7 @@ void CGameTeams::SetForceCharacterTeam(int ClientID, int Team)
 	if(OldTeam != Team)
 	{
 		SendNewTeams();
+		GameServer()->m_pController->UpdatePlayerColor(GameServer()->m_apPlayers[ClientID]);
 
 		if(GetPlayer(ClientID))
 		{

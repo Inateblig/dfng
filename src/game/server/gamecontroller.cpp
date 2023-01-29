@@ -789,7 +789,7 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 	str_format(aBuf, sizeof(aBuf), "team_join player='%d:%s' m_Team=%d", ClientID, Server()->ClientName(ClientID), Team);
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
-	// OnPlayerInfoChange(pPlayer);
+	UpdatePlayerColor(pPlayer);
 }
 
 void IGameController::DoWinCheck()
@@ -819,4 +819,24 @@ void IGameController::DoWinCheck()
 		else
 			m_SuddenDeath = 1;
 	}
+}
+
+void IGameController::UpdatePlayerColor(CPlayer *plr)
+{
+	int t, cid, tclr;
+
+	cid = plr->GetCID();
+	t = GameServer()->TeamsCore()->RTeam(cid);
+	tclr = ColorHSLA(t / 64.0f, 1.0f, 0.25f).Pack();
+
+	if (plr->GetTeam() == TEAM_SPECTATORS) {
+		plr->m_TeeInfos.m_UseCustomColor = 1;
+		plr->m_TeeInfos.m_ColorBody = 12895054;
+		plr->m_TeeInfos.m_ColorFeet = 12895054;
+	} else if (t) {
+		plr->m_TeeInfos.m_UseCustomColor = 1;
+		plr->m_TeeInfos.m_ColorBody = tclr;
+		plr->m_TeeInfos.m_ColorFeet = tclr;
+	} else
+		plr->m_TeeInfos.m_UseCustomColor = 0;
 }
