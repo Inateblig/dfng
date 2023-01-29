@@ -280,6 +280,7 @@ public:
 
 	class CGameTeams *Teams();
 	CTeamsCore *TeamsCore();
+	int RTeamOf(int cid);
 	int TeamOf(int cid);
 
 	int adddummy();

@@ -3549,6 +3549,11 @@ CTeamsCore *CGameContext::TeamsCore()
 	return &Teams()->m_Core;
 }
 
+int CGameContext::RTeamOf(int cid)
+{
+	return TeamsCore()->RTeam(cid);
+}
+
 int CGameContext::TeamOf(int cid)
 {
 	return TeamsCore()->Team(cid);

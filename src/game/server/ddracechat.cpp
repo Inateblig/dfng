@@ -1035,7 +1035,7 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 				Team = pController->m_Teams.GetFirstEmptyTeam();
 
 			cid = pPlayer->GetCID();
-			if ((t = pSelf->TeamsCore()->Team(cid)) && t == pSelf->TeamsCore()->RTeam(cid)) {
+			if ((t = pSelf->TeamOf(cid)) && t == pSelf->RTeamOf(cid)) {
 				pSelf->SendChatTarget(cid, "You cannot change team now!");
 				return;
 			}
@@ -1100,33 +1100,40 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 
 void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
 {
-	CGameContext *pSelf = (CGameContext *)pUserData;
+	CGameContext *pSelf;
 	int i, t, af, cid;
 
+	pSelf = (CGameContext *)pUserData;
 	cid = pResult->m_ClientID;
 	if (!CheckClientID(cid) || !pSelf->m_apPlayers[cid])
 		return;
 
-	t = pSelf->TeamsCore()->RTeam(cid);
+	t = pSelf->RTeamOf(cid);
 	if (!t) {
 		pSelf->SendChatTarget(cid, "No /team0play!");
 		return;
 	}
 	af = pSelf->TeamsCore()->activefor[cid];
 	if (af >= 0) {
-		if (af != cid && af != MAX_CLIENTS)
-			pSelf->SendChatTarget(cid, "You can't teamplay while frozen!");
+		if (af == cid || af == MAX_CLIENTS)
+			return;
+		for (i = 0; i < MAX_CLIENTS; i++)
+			if (pSelf->RTeamOf(i) == t) {
+				pSelf->mkdummyof(cid);
+				return;
+			}
+		pSelf->SendChatTarget(cid, "You have no teammates to unfreeze you!");
 		return;
 	}
 
 	for (i = 0; i < MAX_CLIENTS; i++)
-		if (pSelf->TeamOf(i) == t)
-			goto found;
+		if (pSelf->TeamOf(i) == t) {
+			pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
+			pSelf->Teams()->SendNewTeams();
+			return;
+		}
 	pSelf->SendChatTarget(cid, "Your team has no active frozen dummies!");
 	return;
-found:
-	pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
-	pSelf->Teams()->SendNewTeams();
 }
 
 void CGameContext::ConListTeams(IConsole::IResult *pResult, void *pUserData)
@@ -1142,7 +1149,7 @@ void CGameContext::ConListTeams(IConsole::IResult *pResult, void *pUserData)
 	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
 		if (!CheckClientID(i) || !pSelf->m_apPlayers[i])
 			continue;
-		snprintf(buf, sizeof buf, "%2d: %s", pSelf->TeamsCore()->RTeam(i),
+		snprintf(buf, sizeof buf, "%2d: %s", pSelf->RTeamOf(i),
 			pSelf->Server()->ClientName(i));
 		pSelf->SendChatTarget(cid, buf);
 	}

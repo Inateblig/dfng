@@ -102,7 +102,7 @@ float IGameController::EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos, int DDTeam)
 		id = ch->GetPlayer()->GetCID();
 		if (!d)
 			Score += 1000000000.0f;
-		else if (DDTeam != 0 && GameServer()->TeamsCore()->RTeam(id) == DDTeam)
+		else if (DDTeam != 0 && GameServer()->RTeamOf(id) == DDTeam)
 			Score -= 8.f / d; /* closer to team mates */
 		else
 			Score += 1.0f / d;
@@ -160,7 +160,7 @@ bool IGameController::CanSpawn(int Team, vec2 *pOutPos, int cid)
 	if(Team == TEAM_SPECTATORS)
 		return false;
 
-	t = GameServer()->TeamsCore()->RTeam(cid);
+	t = GameServer()->RTeamOf(cid);
 	EvaluateSpawnType(&Eval, 0, t);
 	EvaluateSpawnType(&Eval, 1, t);
 	EvaluateSpawnType(&Eval, 2, t);
@@ -826,7 +826,7 @@ void IGameController::UpdatePlayerColor(CPlayer *plr)
 	int t, cid, tclr;
 
 	cid = plr->GetCID();
-	t = GameServer()->TeamsCore()->RTeam(cid);
+	t = GameServer()->RTeamOf(cid);
 	tclr = ColorHSLA(t / 64.0f, 1.0f, 0.25f).Pack();
 
 	if (plr->GetTeam() == TEAM_SPECTATORS) {
