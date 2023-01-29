@@ -2015,6 +2015,7 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 			else if(str_comp_nocase(pMsg->m_pType, "kick") == 0)
 			{
 				int Authed = Server()->GetAuthedState(ClientID);
+				int KickID = str_toint(pMsg->m_pValue);
 				if(!Authed && time_get() < m_apPlayers[ClientID]->m_Last_KickVote + (time_freq() * 5))
 					return;
 				else if(!Authed && time_get() < m_apPlayers[ClientID]->m_Last_KickVote + (time_freq() * g_Config.m_SvVoteKickDelay))
@@ -2031,6 +2032,15 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				{
 					SendChatTarget(ClientID, "Server does not allow voting to kick players");
 					m_apPlayers[ClientID]->m_Last_KickVote = time_get();
+					return;
+				}
+
+				if (Server()->Tick() - m_apPlayers[KickID]->m_JoinTick < g_Config.m_SvVoteKickMinTime * Server()->TickSpeed()) {
+					str_format(aChatmsg, sizeof(aChatmsg),
+						"'%s' tried to kick '%s' but failed because '%s' just joined",
+						Server()->ClientName(ClientID), Server()->ClientName(KickID), Server()->ClientName(KickID)
+					);
+					SendChat(-1, CGameContext::CHAT_ALL, aChatmsg);
 					return;
 				}
 
@@ -2071,8 +2081,6 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 						return;
 					}
 				}
-
-				int KickID = str_toint(pMsg->m_pValue);
 
 				if(KickID < 0 || KickID >= MAX_CLIENTS || !m_apPlayers[KickID])
 				{
