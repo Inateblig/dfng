@@ -67,4 +67,7 @@ CHAT_COMMAND("teleport", "?r[player name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConTe
 
 CHAT_COMMAND("kill", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConProtectedKill, this, "Kill yourself when kill-protected during a long game (use f1, kill for regular kill)")
 
+CHAT_COMMAND("modinfo", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConModInfo, this, "Shows info about this gamemod")
+CHAT_COMMAND("spikeinfo", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConSpikeInfo, this, "Shows info about the spikes")
+
 #undef CHAT_COMMAND

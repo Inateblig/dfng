@@ -64,7 +64,7 @@ void CGameContext::ConInfo(IConsole::IResult *pResult, void *pUserData)
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 		"Official site: DDNet.org");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
-		"For more info: /cmdlist");
+		"For more info: /cmdlist and /modinfo");
 	pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
 		"Or visit DDNet.org");
 }
@@ -1101,7 +1101,7 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	int i, t, cid;
+	int i, t, af, cid;
 
 	cid = pResult->m_ClientID;
 	if (!CheckClientID(cid) || !pSelf->m_apPlayers[cid])
@@ -1112,8 +1112,10 @@ void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
 		pSelf->SendChatTarget(cid, "No /team0play!");
 		return;
 	}
-	if (pSelf->TeamsCore()->activefor[cid] < 0) {
-		pSelf->SendChatTarget(cid, "You can't teamplay while frozen!");
+	af = pSelf->TeamsCore()->activefor[cid];
+	if (af >= 0) {
+		if (af != cid && af != MAX_CLIENTS)
+			pSelf->SendChatTarget(cid, "You can't teamplay while frozen!");
 		return;
 	}
 
@@ -1131,7 +1133,7 @@ void CGameContext::ConListTeams(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
 	int i, cid;
-	char buf[128];
+	char buf[16 + MAX_NAME_LENGTH];
 
 	cid = pResult->m_ClientID;
 	if (!CheckClientID(cid) || !pSelf->m_apPlayers[cid])
@@ -1653,4 +1655,44 @@ void CGameContext::ConTimeCP(IConsole::IResult *pResult, void *pUserData)
 
 	const char *pName = pResult->GetString(0);
 	pSelf->Score()->LoadPlayerData(pResult->m_ClientID, pName);
+}
+
+void CGameContext::ConModInfo(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf;
+	size_t i;
+	const char *lns[] = {
+		"The gamemod repo is here https://github.com/Inateblig/dfng",
+		"dfng is a teeworlds mod based on ddnet code, inspired by fng",
+		"How this mod works:",
+		"/spikeinfo lists how many points per spike type",
+		"You can selfkill at anytime to respawn. If you were frozen, a dummy will take your place",
+		"/team registers you in a team. When getting a kill you and your kill are moved to that team",
+		"If a teammate gets a kill you can use /teamplay to join your team",
+	};
+
+	pSelf = (CGameContext *)pUserData;
+	for (i = 0; i < NELM(lns); i++)
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", lns[i]);
+}
+
+void CGameContext::ConSpikeInfo(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	char aBuf[128];
+
+	#define PRINT_SPIKE(C)\
+		str_format(aBuf, sizeof(aBuf), #C ": %d", g_Config.m_SvScoreSpike##C);\
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp", aBuf)
+	PRINT_SPIKE(WHITE);
+	PRINT_SPIKE(LBLUE);
+	PRINT_SPIKE(BLUE);
+	PRINT_SPIKE(ORANGE);
+	PRINT_SPIKE(RED);
+	PRINT_SPIKE(PINK);
+	PRINT_SPIKE(GREEN);
+	PRINT_SPIKE(PURPLE);
+	PRINT_SPIKE(YELLOW);
+	PRINT_SPIKE(BLACK);
+	#undef PRINT_SPIKE
 }
