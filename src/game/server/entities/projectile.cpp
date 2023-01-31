@@ -132,6 +132,17 @@ void CProjectile::Tick()
 	if(m_LifeSpan > -1)
 		m_LifeSpan--;
 
+	if (Collide && m_Type == WEAPON_GUN) { /* bounce */
+		#define ISTEDGE(F) ((int)(F) == (F) && (int)(F) % 32 == 0) /* is tile's edge */
+		if (ISTEDGE(ColPos.x))
+			m_Direction.x *= -1;
+		if (ISTEDGE(ColPos.y))
+			m_Direction.y *= -1;
+		m_Pos = PrevPos;
+		m_StartTick = Server()->Tick();
+		Collide = 0;
+	}
+
 	int64_t TeamMask = -1LL;
 	bool IsWeaponCollide = false;
 	if(

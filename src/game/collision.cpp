@@ -334,29 +334,29 @@ CCollision::gettile(ivec2 p) const
 
 int CCollision::IntersectLine(vec2 Pos0, vec2 Pos1, vec2 *pOutCollision, vec2 *pOutBeforeCollision) const
 {
-	vec2 p, d;
-	ivec2 tp, ptp;
+	vec2 pp, p, d;
+	ivec2 tp;
 	float sc;
 	int in[2] = {1, 1};
-	int ii = 0, t;
+	int ii, t;
 
-	p = Pos0;
-	tp = ivec2(p.x / 32.f, p.y / 32.f);
-	d = (Pos1 - Pos0) / 32.f;
-	ptp = tp;
+	p = Pos0 / 32.f;
+	d = Pos1 / 32.f - p;
+	tp = ivec2(p.x, p.y);
+	pp = p;
 	do {
 		t = gettile(tp);
 		if (t == TILE_SOLID || t == TILE_NOHOOK) {
 			if (pOutCollision)
-				*pOutCollision = vec2(tp.x, tp.y) * 32.f;
+				*pOutCollision = p * 32.f;
 			if (pOutBeforeCollision)
-				*pOutBeforeCollision = vec2(ptp.x, ptp.y) * 32.f;
+				*pOutBeforeCollision = pp * 32.f;
 			return t;
 		}
-		ptp = tp;
 		if ((ii = getpntisn(&tp, &sc, p, d, in)) < 0)
 			break;
 		in[ii] = (&d.x)[ii] > 0.f;
+		pp = p;
 		p += d * sc;
 		d -= d * sc;
 	} while (1);

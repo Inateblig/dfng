@@ -428,6 +428,7 @@ void CCharacter::FireWeapon()
 		return;
 
 	vec2 ProjStartPos = m_Pos + Direction * GetProximityRadius() * 0.75f;
+	vec2 GunProjPos = m_Pos + Direction;
 
 	switch(m_Core.m_ActiveWeapon)
 	{
@@ -492,7 +493,7 @@ void CCharacter::FireWeapon()
 				GameWorld(),
 				WEAPON_GUN, //Type
 				m_pPlayer->GetCID(), //Owner
-				ProjStartPos, //Pos
+				GunProjPos, //Pos
 				Direction, //Dir
 				Lifetime, //Span
 				false, //Freeze
