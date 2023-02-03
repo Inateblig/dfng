@@ -48,6 +48,7 @@ CHAT_COMMAND("timecp", "?r[player name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConTime
 CHAT_COMMAND("team", "?i[id]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConJoinTeam, this, "Lets you join team i (shows your team if left blank)")
 CHAT_COMMAND("teamplay", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConTeamPlay, this, "Activate team for teamplay")
 CHAT_COMMAND("listteams", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConListTeams, this, "Get a list of players' registered team")
+CHAT_COMMAND("listscore", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConListScore, this, "Get a list of teams' score")
 CHAT_COMMAND("lock", "?i['0'|'1']", CFGFLAG_CHAT | CFGFLAG_SERVER, ConLockTeam, this, "Toggle team lock so no one else can join and so the team restarts when a player dies. /lock 0 to unlock, /lock 1 to lock.")
 CHAT_COMMAND("unlock", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConUnlockTeam, this, "Unlock a team")
 CHAT_COMMAND("invite", "r[player name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConInviteTeam, this, "Invite a person to a locked team")

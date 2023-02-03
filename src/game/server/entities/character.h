@@ -69,6 +69,9 @@ public:
 	void TakeHammerHit(CCharacter *pFrom);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
 	void Clone(int whom);
+	void GiveFlag(class CFlag *fl);
+	void DropFlag();
+	void PassFlag(CCharacter *to);
 
 	bool Spawn(class CPlayer *pPlayer, vec2 Pos);
 	bool Remove();
@@ -196,6 +199,7 @@ public:
 	vec2 m_PrevPos;
 	int m_TeleCheckpoint;
 
+	CFlag *m_pCarryingFlag;
 	int m_TimeCpBroadcastEndTick;
 	int m_LastTimeCp;
 	int m_LastTimeCpBroadcasted;

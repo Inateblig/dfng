@@ -228,9 +228,10 @@ MACRO_CONFIG_INT(SvScoreSpikePINK, sv_score_spike_pink, 6, 0, 100, CFGFLAG_SERVE
 MACRO_CONFIG_INT(SvScoreSpikeWHITE, sv_score_spike_white, 1, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
 MACRO_CONFIG_INT(SvScoreSpikeBLACK, sv_score_spike_black, 15, 0, 100, CFGFLAG_SERVER, "Points for grabbing into this spike")
 
-MACRO_CONFIG_INT(SvGiveWeapon, sv_give_weapon, 1, 1, 4, CFGFLAG_SERVER, "weapon to give on spawn")
-
-
+MACRO_CONFIG_INT(SvGiveWeapon, sv_give_weapon, 1, 0, 5, CFGFLAG_SERVER, "weapon to give on spawn")
+MACRO_CONFIG_INT(SvFlagThrowStrength, sv_flag_throw_strength, 20, 0, 1000, CFGFLAG_SERVER, "The strength to thow the flag")
+MACRO_CONFIG_INT(SvGoalScorePoints, sv_goal_score_points, 25, 0, 1000, CFGFLAG_SERVER, "Points to give when scored (scoring with tee gives x2)")
+MACRO_CONFIG_INT(SvNumTeamsAllowed, sv_num_teams_allowed, 2, 1, MAX_CLIENTS-1, CFGFLAG_SERVER, "starts from team 1")
 
 // debug
 #ifdef CONF_DEBUG // this one can crash the server if not used correctly

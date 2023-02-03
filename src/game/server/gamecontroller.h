@@ -6,6 +6,8 @@
 #include <base/vmath.h>
 #include <engine/map.h>
 
+#include <game/teamscore.h>
+
 /*
 	Class: Game Controller
 		Controls the main game logic. Keeping track of team and player score,
@@ -63,11 +65,18 @@ protected:
 	bool m_ForceBalanced;
 
 public:
+	vec2 goalspos[2][16];
+	int ngoals[2];
+	int teamscore[NUM_TEAMS];
+
 	const char *m_pGameType;
 
 	IGameController(class CGameContext *pGameServer);
 	virtual ~IGameController();
 	virtual void DoWinCheck();
+	int FlagGoal(class CFlag *fl);
+	void OnTeamEnter(int cid);
+	void AddScore(class CPlayer *plr, int s);
 
 	// event
 	/*

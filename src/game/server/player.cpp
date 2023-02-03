@@ -560,14 +560,10 @@ void CPlayer::KillCharacter(int Weapon)
 	if (!m_pCharacter)
 		return;
 
-	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies) {
-		if (GameServer()->mkdummyof(m_ClientID) < 0)
-			return;
-		m_pCharacter->Destroy();
-		goto del;
-	}
+	if (m_pCharacter->m_FreezeTime && m_ClientID < MAX_CLIENTS - ndummies &&
+	    GameServer()->mkdummyof(m_ClientID) < 0)
+		return;
 	m_pCharacter->Die(m_ClientID, Weapon);
-del:
 	delete m_pCharacter;
 	m_pCharacter = 0;
 }

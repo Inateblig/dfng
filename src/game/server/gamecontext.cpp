@@ -88,6 +88,7 @@ void CGameContext::Construct(int Resetting)
 	m_pVoteOptionLast = 0;
 	m_NumVoteOptions = 0;
 	m_LastMapVote = 0;
+	m_LastListScoreTick = 0;
 
 	m_SqlRandomMapResult = nullptr;
 
@@ -3611,6 +3612,24 @@ int CGameContext::mkdummyof(int id)
 	}
 
 	return did;
+}
+
+void CGameContext::ListScore()
+{
+	int i, s, t;
+	char buf[128];
+
+	if ((t = Server()->Tick()) < m_LastListScoreTick + 3 * Server()->TickSpeed())
+		return;
+	m_LastListScoreTick = t;
+
+	SendChat(-1, CHAT_ALL, "Listing Teams Score:");
+	for (i = 1; i < NUM_TEAMS; i++) {
+		if (!(s = m_pController->teamscore[i]))
+			continue;
+		snprintf(buf, sizeof buf, "Team %2d: Score %d", i, s);
+		SendChat(-1, CHAT_ALL, buf);
+	}
 }
 
 void CGameContext::OnMapChange(char *pNewMapName, int MapNameSize)

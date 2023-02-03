@@ -286,6 +286,7 @@ public:
 	int adddummy();
 	void rmdummy(int id);
 	int mkdummyof(int id);
+	void ListScore();
 
 	bool IsClientReady(int ClientID) const override;
 	bool IsClientPlayer(int ClientID) const override;
@@ -319,6 +320,7 @@ public:
 	std::shared_ptr<CScoreRandomMapResult> m_SqlRandomMapResult;
 
 private:
+	int m_LastListScoreTick;
 	// starting 1 to make 0 the special value "no client id"
 	uint32_t NextUniqueClientID = 1;
 	bool m_VoteWillPass;
@@ -397,6 +399,7 @@ private:
 	static void ConJoinTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConTeamPlay(IConsole::IResult *pResult, void *pUserData);
 	static void ConListTeams(IConsole::IResult *pResult, void *pUserData);
+	static void ConListScore(IConsole::IResult *pResult, void *pUserData);
 	static void ConLockTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConUnlockTeam(IConsole::IResult *pResult, void *pUserData);
 	static void ConInviteTeam(IConsole::IResult *pResult, void *pUserData);

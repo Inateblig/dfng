@@ -19,6 +19,8 @@
 #include <game/server/score.h>
 #include <game/server/teams.h>
 
+#include <game/server/entities/flag.h>
+
 MACRO_ALLOC_POOL_ID_IMPL(CCharacter, MAX_CLIENTS)
 
 // Character, "physical" player's part
@@ -423,6 +425,13 @@ void CCharacter::FireWeapon()
 		return;
 	}
 
+	if (m_pCarryingFlag) {
+		m_pCarryingFlag->m_Vel = m_Core.m_Vel + Direction * g_Config.m_SvFlagThrowStrength;
+		m_pCarryingFlag->Drop();
+		m_ReloadTimer[m_Core.m_ActiveWeapon] = 10;
+		return;
+	}
+
 	// check for ammo
 	if(!m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo)
 		return;
@@ -747,6 +756,7 @@ void CCharacter::Tick()
 	{
 		if(m_Core.m_HookedPlayer != -1 && GameServer()->m_apPlayers[m_Core.m_HookedPlayer]->GetTeam() != TEAM_SPECTATORS)
 		{
+			PassFlag(GameServer()->m_apPlayers[m_Core.m_HookedPlayer]->GetCharacter());
 			Antibot()->OnHookAttach(m_pPlayer->GetCID(), true);
 		}
 	}
@@ -2394,6 +2404,7 @@ void CCharacter::Clone(int whom)
 		c = GameServer()->m_apPlayers[id]->GetCharacter()->Core();
 		c->SetHookedPlayer(cid);
 	}
+	PassFlag(ch);
 }
 
 void CCharacter::Hit(int From, int Weapon)
@@ -2417,12 +2428,13 @@ void CCharacter::Hit(int From, int Weapon)
 		Teams()->m_Core.activefor[cid] = From;
 		Teams()->m_Core.activefor[From] = From;
 		Teams()->SendNewTeams();
+		GameServer()->m_pController->OnTeamEnter(cid);
+		GameServer()->m_pController->OnTeamEnter(From);
 	}
 
 	klr = GameServer()->m_apPlayers[From];
 	klr->GetCharacter()->m_ReloadTimer[Weapon] = 10; /* 0 won't always work */
 
-	GameServer()->m_pController->OnCharacterDeath(this, klr, Weapon);
 	m_Core.m_Killer = From;
 
 	char aBuf[256];
@@ -2474,4 +2486,28 @@ void CCharacter::TakeHammerHit(CCharacter *pFrom)
 	if (cid < MAX_CLIENTS -ndummies && (t = Teams()->m_Core.RTeam(cid)) &&
 	    t == Teams()->m_Core.RTeam(from))
 		UnFreeze();
+
+	PassFlag(pFrom);
+}
+
+void CCharacter::GiveFlag(CFlag *fl)
+{
+	fl->m_pCarryingChar = this;
+	fl->m_Scorer = m_pPlayer->GetCID();
+	m_pCarryingFlag = fl;
+}
+
+void CCharacter::DropFlag()
+{
+	m_pCarryingFlag = 0;
+}
+
+void CCharacter::PassFlag(CCharacter *to)
+{
+	CFlag *fl;
+
+	if (!(fl = m_pCarryingFlag) || to->m_pCarryingFlag)
+		return;
+	DropFlag();
+	to->GiveFlag(fl);
 }

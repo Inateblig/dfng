@@ -1039,6 +1039,13 @@ void CGameContext::ConJoinTeam(IConsole::IResult *pResult, void *pUserData)
 				pSelf->SendChatTarget(cid, "You cannot change team now!");
 				return;
 			}
+			if (Team > g_Config.m_SvNumTeamsAllowed) {
+				char buf[128];
+
+				snprintf(buf, sizeof buf, "Only teams from 0 till %d are allowed!", g_Config.m_SvNumTeamsAllowed);
+				pSelf->SendChatTarget(cid, buf);
+				return;
+			}
 			if(pPlayer->m_Last_Team + (int64_t)pSelf->Server()->TickSpeed() * g_Config.m_SvTeamChangeDelay > pSelf->Server()->Tick())
 			{
 				pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "chatresp",
@@ -1130,6 +1137,7 @@ void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
 		if (pSelf->TeamOf(i) == t) {
 			pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
 			pSelf->Teams()->SendNewTeams();
+			pSelf->m_pController->OnTeamEnter(cid);
 			return;
 		}
 	pSelf->SendChatTarget(cid, "Your team has no active frozen dummies!");
@@ -1153,6 +1161,11 @@ void CGameContext::ConListTeams(IConsole::IResult *pResult, void *pUserData)
 			pSelf->Server()->ClientName(i));
 		pSelf->SendChatTarget(cid, buf);
 	}
+}
+
+void CGameContext::ConListScore(IConsole::IResult *pResult, void *pUserData)
+{
+	((CGameContext *)pUserData)->ListScore();
 }
 
 void CGameContext::ConMe(IConsole::IResult *pResult, void *pUserData)

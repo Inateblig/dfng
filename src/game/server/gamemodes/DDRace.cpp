@@ -12,7 +12,7 @@
 #include <game/version.h>
 
 #define GAME_TYPE_NAME "dfng"
-#define TEST_TYPE_NAME "dfng+"
+#define TEST_TYPE_NAME "dfng-T"
 
 CGameControllerDDRace::CGameControllerDDRace(class CGameContext *pGameServer) :
 	IGameController(pGameServer), m_Teams(pGameServer), m_pInitResult(nullptr)

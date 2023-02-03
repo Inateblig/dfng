@@ -13,6 +13,7 @@
 #include "entities/character.h"
 #include "entities/door.h"
 #include "entities/dragger.h"
+#include "entities/flag.h"
 #include "entities/gun.h"
 #include "entities/light.h"
 #include "entities/pickup.h"
@@ -26,7 +27,7 @@ IGameController::IGameController(class CGameContext *pGameServer)
 	m_pGameType = "unknown";
 
 	//
-	DoWarmup(g_Config.m_SvWarmup);
+	DoWarmup(g_Config.m_SvWarmup + 1);
 	m_GameOverTick = -1;
 	m_SuddenDeath = 0;
 	m_RoundStartTick = Server()->Tick();
@@ -40,6 +41,9 @@ IGameController::IGameController(class CGameContext *pGameServer)
 	m_aNumSpawnPoints[0] = 0;
 	m_aNumSpawnPoints[1] = 0;
 	m_aNumSpawnPoints[2] = 0;
+
+	ngoals[0] = 0;
+	ngoals[1] = 0;
 
 	m_CurrentRecord = 0;
 }
@@ -161,9 +165,15 @@ bool IGameController::CanSpawn(int Team, vec2 *pOutPos, int cid)
 		return false;
 
 	t = GameServer()->RTeamOf(cid);
-	EvaluateSpawnType(&Eval, 0, t);
-	EvaluateSpawnType(&Eval, 1, t);
-	EvaluateSpawnType(&Eval, 2, t);
+	if (g_Config.m_SvNumTeamsAllowed == MAX_CLIENTS-1) {
+		EvaluateSpawnType(&Eval, 0, t);
+		EvaluateSpawnType(&Eval, 1, t);
+		EvaluateSpawnType(&Eval, 2, t);
+	} else if (t) {
+		EvaluateSpawnType(&Eval, (t - 1) % 2 + 1, t);
+	} else {
+		EvaluateSpawnType(&Eval, 0, t);
+	}
 
 	*pOutPos = Eval.m_Pos;
 	return Eval.m_Got;
@@ -388,6 +398,31 @@ bool IGameController::OnEntity(int Index, vec2 Pos, int Layer, int Flags, int Nu
 		return true;
 	}
 
+	int t;
+	switch (Index) {
+	case ENTITY_FLAGSTAND_RED:
+	case ENTITY_FLAGSTAND_BLUE:
+		CFlag *fl;
+		t = Index - ENTITY_FLAGSTAND_RED;
+
+		fl = (CFlag *)GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_FLAG);
+		for (; fl; fl = (CFlag *)fl->TypeNext())
+			if (fl->m_Team == t)
+				return true;
+		new CFlag(&GameServer()->m_World, Pos, t);
+		return true;
+	}
+
+	switch (Index) {
+	case ENTITY_GOAL_RED:
+	case ENTITY_GOAL_BLUE:
+		t = Index - ENTITY_GOAL_RED;
+		if (ngoals[t] == NELM(goalspos[0]))
+			break;
+		goalspos[t][ngoals[t]++] = Pos;
+		return true;
+	}
+
 	return false;
 }
 
@@ -427,6 +462,7 @@ void IGameController::EndRound()
 	if(m_Warmup) // game can't end when we are running warmup
 		return;
 
+	GameServer()->ListScore();
 	GameServer()->m_World.m_Paused = true;
 	m_GameOverTick = Server()->Tick();
 	m_SuddenDeath = 0;
@@ -460,6 +496,7 @@ void IGameController::StartRound()
 	str_format(aBuf, sizeof(aBuf), "start round type='%s' teamplay='%d'", m_pGameType, m_GameFlags & GAMEFLAG_TEAMS);
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "game", aBuf);
 
+	memset(teamscore, 0, sizeof teamscore);
 	for (auto &p: GameServer()->m_apPlayers)
 		if (p)
 			p->m_Score = 0;
@@ -477,10 +514,52 @@ void IGameController::OnReset()
 			pPlayer->Respawn();
 }
 
+void IGameController::OnTeamEnter(int cid)
+{
+	CCharacter *ch;
+	CFlag *fl;
+
+	ch = GameServer()->m_apPlayers[cid]->GetCharacter();
+	if ((fl = ch->m_pCarryingFlag))
+		fl->Drop();
+}
+
+int IGameController::FlagGoal(CFlag *fl)
+{
+	CPlayer *plr;
+	int t;
+
+	if (!(plr = GameServer()->m_apPlayers[fl->m_Scorer]))
+		return 0;
+	if (!(t = GameServer()->RTeamOf(plr->GetCID())) ||
+	    (t - 1) % 2 != fl->m_Team)
+		return 0;
+
+	AddScore(plr, (!!fl->m_pCarryingChar + 1) * g_Config.m_SvGoalScorePoints);
+	GameServer()->CreateSoundGlobal(SOUND_CTF_CAPTURE);
+
+	return 1;
+}
+
+void IGameController::AddScore(CPlayer *plr, int s)
+{
+	CCharacter *ch;
+	int t;
+
+	plr->m_Score += s;
+	if ((ch = plr->GetCharacter()))
+		GameServer()->MakeLaserTextPoints(ch->m_Pos, plr->GetCID(), s);
+	if ((t = GameServer()->RTeamOf(plr->GetCID())))
+		teamscore[t] += s;
+}
+
 int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *pKiller, int Weapon)
 {
-	CCharacter *kch;
+	CFlag *fl;
 	int s;
+
+	if ((fl = pVictim->m_pCarryingFlag))
+		fl->Drop();
 
 	if (!pKiller || Weapon == WEAPON_GAME)
 		return 0;
@@ -509,10 +588,7 @@ int IGameController::OnCharacterDeath(class CCharacter *pVictim, class CPlayer *
 	}
 	#undef CASE_SPIKE
 
-	pKiller->m_Score += s;
-	if ((kch = pKiller->GetCharacter()))
-		GameServer()->MakeLaserTextPoints(kch->m_Pos, pKiller->GetCID(), s);
-
+	AddScore(pKiller, s);
 	return 0;
 }
 
@@ -664,6 +740,17 @@ void IGameController::Snap(int SnappingClient)
 		pRaceData->m_BestTime = round_to_int(m_CurrentRecord * 1000);
 		pRaceData->m_Precision = 0;
 		pRaceData->m_RaceFlags = protocol7::RACEFLAG_HIDE_KILLMSG | protocol7::RACEFLAG_KEEP_WANTED_WEAPON;
+	} else {
+		CNetObj_GameData *gdata;
+		CFlag *fl;
+
+		gdata = (CNetObj_GameData *)Server()->SnapNewItem(NETOBJTYPE_GAMEDATA, 0, sizeof *gdata);
+		gdata->m_TeamscoreRed = teamscore[1];
+		gdata->m_TeamscoreBlue = teamscore[2];
+
+		fl = (CFlag *)GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_FLAG);
+		for (; fl; fl = (CFlag *)fl->TypeNext())
+			fl->SetCarrierState(gdata);
 	}
 
 	if(!GameServer()->Switchers().empty())
@@ -795,39 +882,44 @@ void IGameController::DoTeamChange(CPlayer *pPlayer, int Team, bool DoChatMsg)
 void IGameController::DoWinCheck()
 {
 	CPlayer *p;
-	int i, top, ntop;
+	int i, s, t, top;
 
 	if (m_GameOverTick != -1 || m_Warmup || GameServer()->m_World.m_ResetRequested)
 		return;
-	top = ntop = 0;
+	top = 0;
 	for (i = 0; i < MAX_CLIENTS - ndummies; i++) {
 		if (!(p = GameServer()->m_apPlayers[i]))
 			continue;
-		if (p->m_Score > top) {
-			top = p->m_Score;
-			ntop = 1;
-		} else if (p->m_Score == top)
-			ntop++;
+		if ((t = GameServer()->RTeamOf(p->GetCID())))
+			s = teamscore[t];
+		else
+			s = p->m_Score;
+		if (s > top)
+			top = s;
 	}
 
 	// check score win condition
 	if ((g_Config.m_SvScorelimit > 0 && top >= g_Config.m_SvScorelimit) ||
 	    (g_Config.m_SvTimelimit > 0 && Server()->Tick() - m_RoundStartTick >=
 	    g_Config.m_SvTimelimit * Server()->TickSpeed() * 60)) {
-		if (ntop == 1)
-			EndRound();
-		else
-			m_SuddenDeath = 1;
+		EndRound();
 	}
 }
 
 void IGameController::UpdatePlayerColor(CPlayer *plr)
 {
-	int t, cid, tclr;
+	float h;
+	int t, n, cid, tclr;
 
 	cid = plr->GetCID();
 	t = GameServer()->RTeamOf(cid);
-	tclr = ColorHSLA(t / 64.0f, 1.0f, 0.25f).Pack();
+
+	n = g_Config.m_SvNumTeamsAllowed;
+	if (n == MAX_CLIENTS-1)
+		h = t / 64.f;
+	else
+		h = (t - 1) * (64.f / n) / 64.f;
+	tclr = ColorHSLA(h, 1.f, 0.25f).Pack();
 
 	if (plr->GetTeam() == TEAM_SPECTATORS) {
 		plr->m_TeeInfos.m_UseCustomColor = 1;
