@@ -2424,7 +2424,7 @@ void CCharacter::Hit(int From, int Weapon)
 		return;
 
 	Freeze();
-	if (ft) {
+	if (ft && Teams()->m_Core.activefor[From] < 0) {
 		Teams()->m_Core.activefor[cid] = From;
 		Teams()->m_Core.activefor[From] = From;
 		Teams()->SendNewTeams();
