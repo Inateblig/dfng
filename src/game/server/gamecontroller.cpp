@@ -97,19 +97,14 @@ float IGameController::EvaluateSpawnPos(CSpawnEval *pEval, vec2 Pos, int DDTeam)
 {
 	CCharacter *ch;
 	float d, Score;
-	int id;
 
 	Score = 0.f;
 	ch = static_cast<CCharacter *>(GameServer()->m_World.FindFirst(CGameWorld::ENTTYPE_CHARACTER));
 	for(; ch; ch = (CCharacter *)ch->TypeNext()) {
-		d = distance(Pos, ch->m_Pos);
-		id = ch->GetPlayer()->GetCID();
-		if (!d)
-			Score += 1000000000.0f;
-		else if (DDTeam != 0 && GameServer()->RTeamOf(id) == DDTeam)
-			Score -= 8.f / d; /* closer to team mates */
-		else
+		if ((d = distance(Pos, ch->m_Pos)))
 			Score += 1.0f / d;
+		else
+			Score += 1000000000.0f;
 	}
 
 	return Score;
@@ -516,10 +511,13 @@ void IGameController::OnReset()
 
 void IGameController::OnTeamEnter(int cid)
 {
+	CPlayer *plr;
 	CCharacter *ch;
 	CFlag *fl;
 
-	ch = GameServer()->m_apPlayers[cid]->GetCharacter();
+	if (!(plr = GameServer()->m_apPlayers[cid]) ||
+	    !(ch = plr->GetCharacter()))
+		return;
 	if ((fl = ch->m_pCarryingFlag))
 		fl->Drop();
 }

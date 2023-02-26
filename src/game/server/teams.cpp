@@ -561,6 +561,10 @@ void CGameTeams::deact(int cid)
 
 	t = m_Core.Team(cid);
 	m_Core.activefor[cid] = -1;
+	for (i = 0; i < MAX_CLIENTS; i++) {
+		if (m_Core.activefor[i] == af && i != af)
+			return;
+	}
 	m_Core.activefor[af] = -1;
 
 	for (i = 0; i < MAX_CLIENTS; i++)

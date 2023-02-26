@@ -1133,13 +1133,30 @@ void CGameContext::ConTeamPlay(IConsole::IResult *pResult, void *pUserData)
 		return;
 	}
 
-	for (i = 0; i < MAX_CLIENTS; i++)
-		if (pSelf->TeamOf(i) == t) {
-			pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
-			pSelf->Teams()->SendNewTeams();
+	int ka = 0; /* kill available */
+	for (i = 0; i < MAX_CLIENTS; i++) {
+		if (pSelf->TeamsCore()->activefor[i] == cid) {
+			pSelf->TeamsCore()->activefor[cid] = cid;
 			pSelf->m_pController->OnTeamEnter(cid);
+			for (i = 0; i < MAX_CLIENTS; i++) {
+				if (pSelf->TeamsCore()->activefor[i] == cid && i != cid) {
+					pSelf->TeamsCore()->activefor[i] = cid;
+					pSelf->m_pController->OnTeamEnter(i);
+				}
+			}
+			pSelf->Teams()->SendNewTeams();
 			return;
 		}
+		if (pSelf->TeamOf(i) == t)
+			ka = 1;
+	}
+	if (ka) {
+		pSelf->TeamsCore()->activefor[cid] = MAX_CLIENTS;
+		pSelf->m_pController->OnTeamEnter(cid);
+		pSelf->Teams()->SendNewTeams();
+		return;
+	}
+
 	pSelf->SendChatTarget(cid, "Your team has no active frozen dummies!");
 	return;
 }
@@ -1684,11 +1701,14 @@ void CGameContext::ConModInfo(IConsole::IResult *pResult, void *pUserData)
 	const char *lns[] = {
 		"The gamemod repo is here https://github.com/Inateblig/dfng",
 		"dfng is a teeworlds mod based on ddnet code, inspired by fng",
+		"Made by zogtib and Mr.Gh0s7 with ideas from o--}====> and community's feedback",
 		"How this mod works:",
 		"/spikeinfo lists how many points per spike type",
-		"You can selfkill at anytime to respawn. If you were frozen, a dummy will take your place",
-		"/team registers you in a team. When getting a kill you and your kill are moved to that team",
-		"If a teammate gets a kill you can use /teamplay to join your team",
+		"Self-killing when frozen is allowed after a short period; a dummy will take your place",
+		"/team registers you in a team",
+		"Being in a team sets you a color",
+		"After having a kill you can use /teamplay to get moved to your /team with your kills",
+		"You can use /teamplay to join your team if a teammate has a kill on your /team",
 	};
 
 	pSelf = (CGameContext *)pUserData;

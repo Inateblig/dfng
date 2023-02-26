@@ -2488,6 +2488,10 @@ void CGameContext::OnMessage(int MsgID, CUnpacker *pUnpacker, int ClientID)
 				return;
 			}
 
+			if (pChr->Core()->m_FreezeStart &&
+			    Server()->Tick() - pChr->Core()->m_FreezeStart < g_Config.m_SvMinFreezeDelay * Server()->TickSpeed())
+				return;
+
 			pPlayer->m_LastKill = Server()->Tick();
 			pPlayer->KillCharacter(WEAPON_SELF);
 			pPlayer->Respawn();
@@ -3592,23 +3596,24 @@ void CGameContext::rmdummy(int id)
 int CGameContext::mkdummyof(int id)
 {
 	CCharacter *dmy;
-	int t, af, did;
+	int af, did;
 
 	if ((did = adddummy()) < 0)
 		return -1;
 
 	dmy = m_apPlayers[did]->GetCharacter();
-	dmy->Clone(id);
+	if (!dmy->Clone(id)) {
+		rmdummy(did);
+		return -1;
+	}
 	Server()->SetDummyName(did, id);
 
-	t = TeamOf(id);
-	if (t) {
-		af = Teams()->m_Core.activefor[id];
-		if (af >= 0 && af < MAX_CLIENTS) {
-			Teams()->m_Core.activefor[id] = -1;
+	af = Teams()->m_Core.activefor[id];
+	if (af >= 0) {
+		Teams()->m_Core.activefor[id] = -1;
+		if (af != MAX_CLIENTS && af != id)
 			Teams()->m_Core.activefor[did] = af;
-		}
-		Teams()->SetCharacterTeam(did, t);
+		Teams()->SendNewTeams();
 	}
 
 	return did;

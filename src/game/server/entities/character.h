@@ -68,7 +68,7 @@ public:
 	void Hit(int From, int Weapon);
 	void TakeHammerHit(CCharacter *pFrom);
 	bool TakeDamage(vec2 Force, int Dmg, int From, int Weapon);
-	void Clone(int whom);
+	int Clone(int whom);
 	void GiveFlag(class CFlag *fl);
 	void DropFlag();
 	void PassFlag(CCharacter *to);

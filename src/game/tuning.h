@@ -23,9 +23,9 @@ MACRO_TUNING_PARAM(VelrampRange, velramp_range, 2000, "Velocity ramp range")
 MACRO_TUNING_PARAM(VelrampCurvature, velramp_curvature, 1.4f, "Velocity ramp curvature")
 
 // weapon tuning
-MACRO_TUNING_PARAM(GunCurvature, gun_curvature, 1.25f, "Gun curvature")
-MACRO_TUNING_PARAM(GunSpeed, gun_speed, 2200.0f, "Gun speed")
-MACRO_TUNING_PARAM(GunLifetime, gun_lifetime, 2.0f, "Gun lifetime")
+MACRO_TUNING_PARAM(GunCurvature, gun_curvature, 0.f, "Gun curvature")
+MACRO_TUNING_PARAM(GunSpeed, gun_speed, 1200.0f, "Gun speed")
+MACRO_TUNING_PARAM(GunLifetime, gun_lifetime, 0.5f, "Gun lifetime")
 
 MACRO_TUNING_PARAM(ShotgunCurvature, shotgun_curvature, 1.25f, "Shotgun curvature")
 MACRO_TUNING_PARAM(ShotgunSpeed, shotgun_speed, 2750.0f, "Shotgun speed")
@@ -53,7 +53,7 @@ MACRO_TUNING_PARAM(HammerStrength, hammer_strength, 1.0f, "Hammer strength")
 MACRO_TUNING_PARAM(HookDuration, hook_duration, 1.25f, "Hook duration")
 
 MACRO_TUNING_PARAM(HammerFireDelay, hammer_fire_delay, 125, "Delay of hammering (when hitting nothing)")
-MACRO_TUNING_PARAM(GunFireDelay, gun_fire_delay, 125, "Delay of firing gun")
+MACRO_TUNING_PARAM(GunFireDelay, gun_fire_delay, 900, "Delay of firing gun")
 MACRO_TUNING_PARAM(ShotgunFireDelay, shotgun_fire_delay, 500, "Delay of firing shotgun")
 MACRO_TUNING_PARAM(GrenadeFireDelay, grenade_fire_delay, 500, "Delay of firing grenade")
 MACRO_TUNING_PARAM(LaserFireDelay, laser_fire_delay, 800, "Delay of firing laser laser")

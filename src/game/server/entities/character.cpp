@@ -2389,13 +2389,15 @@ void CCharacter::DieSpikes(int tile)
 	Destroy();
 }
 
-void CCharacter::Clone(int whom)
+int CCharacter::Clone(int whom)
 {
+	CPlayer *plr;
 	CCharacter *ch;
 	CCharacterCore *c;
 	int cid;
 
-	ch = GameServer()->m_apPlayers[whom]->GetCharacter();
+	if (!(plr = GameServer()->m_apPlayers[whom]) || !(ch = plr->GetCharacter()))
+		return 0;
 	m_Core = ch->GetCore();
 	m_FreezeTime = ch->m_FreezeTime;
 
@@ -2405,17 +2407,23 @@ void CCharacter::Clone(int whom)
 		c->SetHookedPlayer(cid);
 	}
 	PassFlag(ch);
+	return 1;
 }
 
 void CCharacter::Hit(int From, int Weapon)
 {
 	CPlayer *klr;
-	int t, ft, cid;
+	CCharacter *kch;
+	int i, t, ft, cid;
 
 	cid = m_pPlayer->GetCID();
 	if (m_FreezeTime || From == cid)
 		return;
 	if (cid >= MAX_CLIENTS - ndummies)
+		return;
+	klr = GameServer()->m_apPlayers[From];
+	kch = klr->GetCharacter();
+	if (kch->m_FreezeTime)
 		return;
 
 	ft = Teams()->m_Core.RTeam(From);
@@ -2424,16 +2432,15 @@ void CCharacter::Hit(int From, int Weapon)
 		return;
 
 	Freeze();
-	if (ft && Teams()->m_Core.activefor[From] < 0) {
+	if (ft) {
+		if (Teams()->m_Core.activefor[cid] >= 0)
+			for (i = 0; i < MAX_CLIENTS; i++)
+				if (Teams()->m_Core.activefor[i] == cid)
+					Teams()->m_Core.activefor[i] = -1;
 		Teams()->m_Core.activefor[cid] = From;
-		Teams()->m_Core.activefor[From] = From;
-		Teams()->SendNewTeams();
-		GameServer()->m_pController->OnTeamEnter(cid);
-		GameServer()->m_pController->OnTeamEnter(From);
 	}
 
-	klr = GameServer()->m_apPlayers[From];
-	klr->GetCharacter()->m_ReloadTimer[Weapon] = 10; /* 0 won't always work */
+	kch->m_ReloadTimer[Weapon] = 10; /* 0 won't always work */
 
 	m_Core.m_Killer = From;
 
